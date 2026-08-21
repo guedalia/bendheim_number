@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="build" content="bd6a144f11">
 <title>Bendheim &mdash; Family Numbers</title>
 <style>
 :root{
@@ -375,6 +376,26 @@ function stepDown(pid, nextKind){
   give(nextKind);
   show(current, true);
 }
+
+/* ---- keep the page honest ----
+   GitHub Pages serves HTML with a 10 minute cache, so a returning visitor can sit on
+   an old copy after an update. The build stamp below is regenerated on every deploy;
+   version.txt on the server holds the current one. If they differ, reload once. */
+(function(){
+  const stamp = (document.querySelector('meta[name="build"]') || {}).content;
+  if (!stamp || location.protocol === 'file:') return;
+  fetch('version.txt?cb=' + Date.now(), {cache: 'no-store'})
+    .then(r => r.ok ? r.text() : null)
+    .then(latest => {
+      if (!latest) return;
+      latest = latest.trim();
+      if (!latest || latest === stamp) return;
+      if (sessionStorage.getItem('reloadedFor') === latest) return;
+      sessionStorage.setItem('reloadedFor', latest);
+      location.replace(location.pathname + '?b=' + latest);
+    })
+    .catch(() => {});
+})();
 
 /* ---- start ---- */
 bindSearch();
