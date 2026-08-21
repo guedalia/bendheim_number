@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Family Numbers</title>
+<style>
+:root{
+  --bg:#ffffff; --panel:#f7f7f5; --line:#e3e3df; --ink:#1c1c1a; --dim:#6b6b66;
+  --accent:#2f5d8c; --accent-soft:#eaf1f8; --good:#dff3e4; --good-line:#8dc79f;
+  --warn:#fdf1d8; --warn-line:#e0bd6a; --bad:#fbe4e4; --bad-line:#d99a9a;
+  --mono:'SF Mono',Menlo,Consolas,'Courier New',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{border-bottom:1px solid var(--line);padding:16px 22px}
+header h1{font-size:19px;margin:0;font-weight:600}
+header .sub{color:var(--dim);font-size:13px;margin-top:2px}
+main{padding:22px;max-width:760px;margin:0 auto}
+h3{font-size:12px;margin:20px 0 8px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.card{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
+input[type=text]{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink);font-size:18px}
+button{font:inherit;cursor:pointer;border-radius:8px}
+button.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:11px 16px}
+button.big{padding:14px 20px;font-weight:600;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent)}
+button.big:hover{background:var(--accent);color:#fff}
+.hits{border:1px solid var(--line);border-radius:8px;margin-top:10px;overflow:hidden}
+.hit{padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:12px;align-items:baseline}
+.hit:last-child{border-bottom:0}
+.hit:hover{background:var(--accent-soft)}
+.hit .n{font-family:var(--mono);font-size:12px;color:var(--accent);min-width:118px}
+.hit .m{color:var(--dim);font-size:12px;margin-left:auto;text-align:right}
+.who{font-size:22px;font-weight:700;line-height:1.2}
+.mynum{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--accent);margin:4px 0 2px}
+.dim{color:var(--dim)}
+.mono{font-family:var(--mono)}
+.small{font-size:13px}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.chain{list-style:none;padding:0;margin:0}
+.chain li{padding:5px 0;border-bottom:1px dashed var(--line);display:flex;gap:12px;align-items:baseline;font-size:14px}
+.chain li:last-child{border-bottom:0}
+.chain .n{font-family:var(--mono);font-size:12px;color:var(--accent);min-width:124px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:7px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+tr.me td{background:var(--accent-soft);font-weight:600}
+td.mono{width:130px}
+.result{border:1px solid var(--good-line);background:var(--good);border-radius:10px;padding:20px;margin-bottom:18px}
+.result .lab{font-size:13px;color:#3c6b4c}
+.result .big{font-family:var(--mono);font-size:38px;font-weight:700;letter-spacing:-.5px;margin:2px 0 6px;line-height:1.1}
+.note{border-left:3px solid var(--warn-line);background:var(--warn);padding:10px 13px;border-radius:0 8px 8px 0;font-size:13px;margin:10px 0}
+.note.err{border-left-color:var(--bad-line);background:var(--bad)}
+.note.info{border-left-color:var(--accent);background:var(--accent-soft)}
+code{font-family:var(--mono);font-size:13px;background:var(--panel);padding:1px 5px;border-radius:3px}
+ul.plain{margin:6px 0 0;padding-left:20px;font-size:13px}
+@media (max-width:430px){
+  main{padding:14px}
+  header{padding:14px 16px}
+  .card{padding:14px;border-radius:8px}
+  .who{font-size:20px}
+  .mynum{font-size:25px;word-break:break-all}
+  .result{padding:15px}
+  .result .big{font-size:30px;word-break:break-all}
+  .btns button{flex:1 1 100%;text-align:center}
+  .hit{flex-wrap:wrap}
+  .hit .n{min-width:104px}
+  .hit .m{width:100%;text-align:left;margin-left:0}
+  .chain li{flex-wrap:wrap}
+  .chain .n{min-width:104px}
+  td{padding:7px 6px;word-break:break-word}
+  td.mono{width:104px}
+}
+</style>
+<script src="family_data.js"></script>
+</head>
+<body>
+<header>
+  <h1 id="title">Family Numbers</h1>
+  <div class="sub" id="counts"></div>
+</header>
+<main>
+
+<div id="boot"></div>
+
+<div id="app" style="display:none">
+  <div class="card">
+    <label>Find the family member — type a name, or a number like 2.1.2.1</label>
+    <input type="text" id="q" placeholder="Dani Bendheim" autocomplete="off">
+    <div id="hits"></div>
+  </div>
+  <div id="out"></div>
+  <div id="person"></div>
+</div>
+
+</main>
+<script>
+const SFX = /(S\d?D?|SD|FIL\d?|MIL\d?b?|FL|ML|F\d|M\d)$/;
+const PID_OK = /^\d+(\.\d+)*(S\d?D?|FIL\d?|MIL\d?)?$/;
+let DATA = null, people = [], byPid = new Map(), provisional = [], current = null;
+
+function splitPid(pid){
+  const m = SFX.exec(pid);
+  if (m && m.index > 0) return {core: pid.slice(0, m.index), sfx: m[0]};
+  return {core: pid, sfx: ''};
+}
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function norm(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[{}"'()\[\].,]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+/* ---- load and check the data file ---- */
+function checkData(d){
+  const problems = [];
+  if (!d || !Array.isArray(d.people)) return ['The data file has no "people" list.'];
+  if (!d.root) problems.push('The data file has no "root" number.');
+  const seen = new Map();
+  d.people.forEach((p, i) => {
+    const where = 'line ' + (i + 1) + ' (' + (p && p.pid ? p.pid : '?') + ')';
+    if (!p || typeof p.pid !== 'string' || !p.pid.trim()) return problems.push(where + ': no "pid".');
+    if (typeof p.name !== 'string' || !p.name.trim()) problems.push(where + ': no "name".');
+    if (p.alt !== undefined && typeof p.alt !== 'string') problems.push(where + ': "alt" has to be a name in quotes.');
+    if (!PID_OK.test(p.pid)) problems.push(where + ': that number is not a valid shape.');
+    if (seen.has(p.pid)) problems.push(where + ': the number ' + p.pid + ' is already used by ' + seen.get(p.pid) + '.');
+    else seen.set(p.pid, p.name);
+  });
+  for (const p of d.people){
+    if (!p || !p.pid || !seen.has(p.pid)) continue;
+    const sp = splitPid(p.pid);
+    if (sp.sfx){
+      if (!seen.has(sp.core)) problems.push(p.pid + ' (' + p.name + ') hangs off ' + sp.core + ', who is not listed.');
+      continue;
+    }
+    if (sp.core === d.root) continue;
+    const up = sp.core.split('.').slice(0, -1).join('.');
+    if (up && !seen.has(up)) problems.push(p.pid + ' (' + p.name + ') is a child of ' + up + ', who is not listed.');
+  }
+  return problems;
+}
+function boot(d, sourceLabel){
+  const problems = checkData(d);
+  const bootEl = document.getElementById('boot');
+  if (problems.length && !d.people) { showLoadHelp(problems); return; }
+  DATA = d;
+  provisional = [];
+  index();
+  document.getElementById('app').style.display = '';
+  document.getElementById('title').textContent = (DATA.root_name || 'Family').replace(/\s*\(.*?\)\s*/g,' ').trim() + ' — Family Numbers';
+  document.getElementById('counts').textContent = (DATA.root_name || '') + ' (' + DATA.root + ') and everyone below him · ' +
+    people.length + ' people' + (sourceLabel ? ' · ' + sourceLabel : '');
+  bootEl.innerHTML = problems.length
+    ? '<div class="note err"><b>' + problems.length + ' thing' + (problems.length > 1 ? 's' : '') +
+      ' to fix in family_data.js</b> — the app still works, but these people will not behave correctly:<ul class="plain">' +
+      problems.slice(0, 10).map(x => '<li>' + esc(x) + '</li>').join('') +
+      (problems.length > 10 ? '<li>and ' + (problems.length - 10) + ' more</li>' : '') + '</ul></div>'
+    : '';
+  document.getElementById('q').focus();
+}
+function showLoadHelp(problems){
+  document.getElementById('boot').innerHTML =
+    '<div class="card"><h3 style="margin-top:0">The data file did not load</h3>' +
+    '<p class="small">This page reads <code>family_data.js</code>, which has to sit in the same folder. ' +
+    (problems && problems.length ? 'What went wrong: ' + esc(problems.join(' ')) : '') + '</p>' +
+    '<p class="small">You can also point at a file by hand — a <code>family_data.js</code> or a plain <code>.json</code> with the same contents:</p>' +
+    '<input type="file" id="picker" accept=".js,.json,.txt" style="font-size:15px">' +
+    '<div id="pickerMsg"></div></div>';
+  document.getElementById('picker').onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      let txt = String(r.result).trim();
+      const i = txt.indexOf('{');
+      if (i > 0) txt = txt.slice(i);
+      txt = txt.replace(/;\s*$/, '');
+      try { boot(JSON.parse(txt), 'loaded from ' + f.name); document.getElementById('boot').innerHTML = ''; }
+      catch (err){ document.getElementById('pickerMsg').innerHTML = '<div class="note err">Could not read that file: ' + esc(err.message) + '</div>'; }
+    };
+    r.readAsText(f);
+  };
+}
+
+function index(){
+  people = DATA.people.concat(provisional);
+  byPid = new Map(people.map(p => [p.pid, p]));
+  for (const p of people) if (p.core === undefined) Object.assign(p, splitPid(p.pid));
+}
+
+/* ---- search ---- */
+function search(q, limit){
+  limit = limit || 10;
+  const raw = (q||'').trim();
+  if (!raw) return [];
+  if (/^[.0-9]/.test(raw)){
+    const key = raw.replace(/\s+/g,'').toLowerCase();
+    const hits = people.filter(p => p.pid.toLowerCase().startsWith(key));
+    hits.sort((a,b) => a.pid.length - b.pid.length || a.pid.localeCompare(b.pid));
+    if (hits.length) return hits.slice(0, limit);
+  }
+  const nq = norm(raw).replace(/\[.*?\]/g,'').trim();
+  if (!nq) return [];
+  const toks = nq.split(' ');
+  const scored = [];
+  for (const p of people){
+    // "alt" is a second name — the formal one from the genealogy site. It is matched
+    // here so searching either name finds the person, but it is never displayed.
+    const shown = norm(p.name), hidden = norm(p.alt);
+    const hay = hidden ? shown + ' ' + hidden : shown;
+    let s = 0, all = true;
+    for (const t of toks){
+      const i = hay.indexOf(t);
+      if (i < 0){ all = false; break; }
+      s += (i === 0 || hay[i-1] === ' ') ? 3 : 1;
+    }
+    if (!all) continue;
+    if (shown.startsWith(toks[0])) s += 3;
+    else if (hidden && hidden.startsWith(toks[0])) s += 2;
+    if (!p.sfx) s += 1;
+    scored.push([s, p]);
+  }
+  scored.sort((a,b) => b[0]-a[0] || a[1].pid.localeCompare(b[1].pid));
+  return scored.slice(0, limit).map(x => x[1]);
+}
+
+/* ---- the numbering rules ---- */
+function lastSeg(core){ const s = core.split('.'); return s[s.length-1]; }
+function parentCoreOf(core){
+  if (!DATA || core === DATA.root) return '';
+  const s = core.split('.'); s.pop();
+  return s.join('.');
+}
+function childrenOf(core){
+  const re = new RegExp('^' + core.replace(/\./g,'\\.') + '\\.\\d+$');
+  return people.filter(q => !q.sfx && re.test(q.core))
+               .sort((a,b) => (parseInt(lastSeg(a.core),10)||0) - (parseInt(lastSeg(b.core),10)||0));
+}
+function spousesOf(core){
+  return people.filter(q => q.core === core && /^S/.test(q.sfx)).sort((a,b) => a.sfx.localeCompare(b.sfx));
+}
+function lineage(core){
+  const out = []; let c = core; const seen = {};
+  while (c && !seen[c]){
+    seen[c] = 1;
+    out.unshift({core:c, person: byPid.get(c)});
+    if (c === DATA.root) break;
+    const up = parentCoreOf(c); if (!up || up === c) break;
+    c = up;
+  }
+  return out;
+}
+function roleName(sfx){
+  if (/D$/.test(sfx)) return 'former spouse';
+  if (/^S/.test(sfx)) return 'spouse' + (/\d/.test(sfx)? ' (marriage ' + sfx.replace(/\D/g,'') + ')' : '');
+  if (/^(FIL|FL|F\d)/.test(sfx)) return 'father-in-law';
+  if (/^(MIL|ML|M\d)/.test(sfx)) return 'mother-in-law';
+  return sfx;
+}
+function numberForChild(anchorPid){
+  const anchor = byPid.get(anchorPid);
+  if (!anchor) return {error:'That person is not in the data file.'};
+  const blood = byPid.get(anchor.core) || anchor;
+  const kids = childrenOf(blood.core);
+  const notes = [];
+  const pid = blood.core + '.' + (Math.max.apply(null, [0].concat(kids.map(k => parseInt(lastSeg(k.core),10)||0))) + 1);
+  if (anchor.sfx) notes.push('Counted down the blood line through ' + blood.pid + ' (' + blood.name + '), which is how the scheme works.');
+  return {pid, kind:'child', anchor:blood, siblings:kids, notes};
+}
+function numberForSpouse(memberPid){
+  const m = byPid.get(memberPid);
+  if (!m) return {error:'That person is not in the data file.'};
+  if (m.sfx) return {error: m.name + ' married in, so their number already hangs off a blood-line member. Start from that member.'};
+  const all = spousesOf(m.core);
+  const notes = [];
+  let pid;
+  if (!all.length) pid = m.pid + 'S';
+  else {
+    const n = Math.max.apply(null, all.map(s => { const d = /S(\d)/.exec(s.sfx); return d? parseInt(d[1],10) : 1; })) + 1;
+    pid = m.pid + 'S' + n;
+    notes.push('A spouse is already listed (' + all.map(s => s.pid + ' ' + s.name).join('; ') + '), so this marriage is number ' + n + '. The earlier one is usually rewritten as ' + m.pid + 'S1 at the same time, or SD if it ended.');
+  }
+  return {pid, kind:'spouse', anchor:m, siblings:[], notes};
+}
+
+/* ---- screen ---- */
+function personRow(p){
+  return '<div class="hit" data-pid="' + esc(p.pid) + '"><span class="n">' + esc(p.pid) + '</span><span>' + esc(p.name) + '</span>' +
+    (p.sfx? '<span class="m">' + esc(roleName(p.sfx)) + '</span>' : '') + '</div>';
+}
+function firstName(p){ return ((p && p.name) || '').split(' ')[0]; }
+function nameNumberTable(list, mePid){
+  return '<table>' + list.map(x => '<tr class="' + (x.pid === mePid? 'me' : '') + '"><td class="mono">' + esc(x.pid) +
+    '</td><td>' + esc(x.name) + '</td></tr>').join('') + '</table>';
+}
+function bindSearch(){
+  const q = document.getElementById('q');
+  q.oninput = () => {
+    const list = search(q.value, 10);
+    const el = document.getElementById('hits');
+    if (!list.length){ el.innerHTML = q.value.trim()? '<div class="note">Nobody in the data file matches that.</div>' : ''; return; }
+    el.innerHTML = '<div class="hits">' + list.map(personRow).join('') + '</div>';
+    el.querySelectorAll('.hit').forEach(d => d.onclick = () => goto(d.dataset.pid));
+  };
+}
+function goto(pid){
+  const target = byPid.get(pid);
+  if (provisional.length && target && !target.prov){ provisional = []; index(); }
+  show(byPid.get(pid));
+}
+function show(p, keepResult){
+  if (!p) return;
+  current = p;
+  document.getElementById('hits').innerHTML = '';
+  if (!keepResult) document.getElementById('out').innerHTML = '';
+  document.getElementById('q').value = p.name;
+  const kids = childrenOf(p.core);
+  // a married-in record shares its core with the member it hangs off, so drop the
+  // person themselves — otherwise a spouse is listed as their own spouse
+  const sps = spousesOf(p.core).filter(s => s.pid !== p.pid);
+  const marriedTo = p.sfx ? byPid.get(p.core) : null;
+  const sibs = p.sfx ? [] : childrenOf(parentCoreOf(p.core));
+  const line = lineage(p.core).filter(l => l.core !== p.core);
+  let h = '<div class="card"><div class="who">' + esc(p.name) + '</div>' +
+    '<div class="mynum">' + esc(p.pid) + '</div>' +
+    (p.sfx? '<div class="dim small">' + esc(roleName(p.sfx)) + ' of ' + esc((byPid.get(p.core)||{}).name || p.core) + '</div>' : '') +
+    '<h3>Give me the number for</h3><div class="btns" style="margin-top:0">' +
+      '<button class="big" data-do="spouse">Their spouse</button>' +
+      '<button class="big" data-do="child">Their next child</button>' +
+    '</div>';
+  if (marriedTo) h += '<h3>Married to</h3>' + personRow(marriedTo);
+  if (sps.length) h += '<h3>' + (marriedTo ? 'Also listed at this number' : 'Spouse listed') + '</h3>' + sps.map(personRow).join('');
+  if (kids.length) h += '<h3>Children</h3>' + nameNumberTable(kids);
+  if (sibs.length > 1) h += '<h3>Brothers and sisters, in order</h3>' + nameNumberTable(sibs, p.pid);
+  // on a married-in person's card this is the partner's descent, not theirs — say so
+  const lineHead = marriedTo ? esc(firstName(marriedTo)) + ' comes down from' : 'Comes down from';
+  if (line.length) h += '<h3>' + lineHead + '</h3><ul class="chain">' + line.map(l => '<li><span class="n">' + esc(l.core) +
+    '</span><span>' + (l.person? esc(l.person.name) : '<span class="dim">not listed</span>') + '</span></li>').join('') + '</ul>';
+  h += '</div>';
+  const el = document.getElementById('person');
+  el.innerHTML = h;
+  el.querySelectorAll('.hit').forEach(d => d.onclick = () => goto(d.dataset.pid));
+  el.querySelectorAll('button[data-do]').forEach(b => b.onclick = () => give(b.dataset.do));
+}
+function give(kind){
+  const p = current;
+  const res = kind === 'spouse' ? numberForSpouse(p.pid) : numberForChild(p.pid);
+  const out = document.getElementById('out');
+  if (res.error){ out.innerHTML = '<div class="note err">' + esc(res.error) + '</div>'; window.scrollTo({top:0, behavior:'smooth'}); return; }
+  let h = '<div class="result"><div class="lab">' +
+    (kind === 'spouse' ? 'whoever marries ' + esc(p.name) : 'next child of ' + esc(res.anchor.name)) +
+    '</div><div class="big">' + esc(res.pid) + '</div>' +
+    '<div class="btns" style="margin-top:12px">' +
+      '<button class="ghost" data-next="child">Then their child →</button>' +
+      (kind === 'spouse' ? '' : '<button class="ghost" data-next="spouse">Then their spouse →</button>') +
+    '</div></div>';
+  (res.notes||[]).forEach(n => h += '<div class="note">' + esc(n) + '</div>');
+  if (res.siblings && res.siblings.length)
+    h += '<div class="card"><h3 style="margin-top:0">Where it slots in</h3>' +
+      nameNumberTable(res.siblings.concat([{pid:res.pid, name:'← the new one'}]), res.pid) + '</div>';
+  out.innerHTML = h;
+  out.querySelectorAll('button[data-next]').forEach(b => b.onclick = () => stepDown(res.pid, b.dataset.next));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function stepDown(pid, nextKind){
+  if (!byPid.get(pid)){
+    const sp = splitPid(pid);
+    provisional.push({pid, core:sp.core, sfx:sp.sfx, name:'(the new person, ' + pid + ')', prov:true});
+    index();
+  }
+  current = byPid.get(pid);
+  give(nextKind);
+  show(current, true);
+}
+
+/* ---- start ---- */
+bindSearch();
+if (window.FAMILY_DATA) boot(window.FAMILY_DATA, 'family_data.js');
+else showLoadHelp(['family_data.js was not found next to this page.']);
+</script>
+</body>
+</html>
