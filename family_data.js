@@ -340,6 +340,7 @@ window.FAMILY_DATA = {
     {"pid": "2.1.2.5.2.3S",        "name": "Avreimi Farbstein"},
     {"pid": "2.1.2.5.2.3.1",       "name": "Ayala Farbstein"},
     {"pid": "2.1.2.5.2.4",         "name": "Chani Bendheim", "alt": "Peesyl Chani Bendheim"},
+    {"pid": "2.1.2.5.2.4S",        "name": "Gavriel Sternfeld"},
     {"pid": "2.1.2.5.2.5",         "name": "Chaim Bendheim"},
     {"pid": "2.1.2.5.2.6",         "name": "Akiva Bendheim"},
     {"pid": "2.1.2.5.2.7",         "name": "Tamar Bendheim"},
