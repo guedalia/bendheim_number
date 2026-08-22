@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<meta name="build" content="aed025605c">
+<meta name="build" content="3f37576703">
 <title>Bendheim &mdash; Family Numbers</title>
 <style>
 :root{
@@ -75,7 +75,7 @@ footer{margin:34px 0 8px;color:var(--dim);font-size:12.5px;text-align:center;fon
   td.mono{width:104px}
 }
 </style>
-<script src="family_data.js?v=e18b5a242e"></script>
+<script src="family_data.js?v=642e6c72c7"></script>
 </head>
 <body>
 <header>
@@ -125,7 +125,9 @@ function checkData(d){
     const where = 'line ' + (i + 1) + ' (' + (p && p.pid ? p.pid : '?') + ')';
     if (!p || typeof p.pid !== 'string' || !p.pid.trim()) return problems.push(where + ': no "pid".');
     if (typeof p.name !== 'string' || !p.name.trim()) problems.push(where + ': no "name".');
-    if (p.alt !== undefined && typeof p.alt !== 'string') problems.push(where + ': "alt" has to be a name in quotes.');
+    if (p.alt !== undefined && !(typeof p.alt === 'string' ||
+        (Array.isArray(p.alt) && p.alt.every(x => typeof x === 'string'))))
+      problems.push(where + ': "alt" has to be a name in quotes, or a list of them.');
     if (!PID_OK.test(p.pid)) problems.push(where + ': that number is not a valid shape.');
     if (seen.has(p.pid)) problems.push(where + ': the number ' + p.pid + ' is already used by ' + seen.get(p.pid) + '.');
     else seen.set(p.pid, p.name);
@@ -210,7 +212,8 @@ function search(q, limit){
   for (const p of people){
     // "alt" is a second name — the formal one from the genealogy site. It is matched
     // here so searching either name finds the person, but it is never displayed.
-    const shown = norm(p.name), hidden = norm(p.alt);
+    const shown = norm(p.name);
+    const hidden = norm(Array.isArray(p.alt) ? p.alt.join(' ') : p.alt);
     const hay = hidden ? shown + ' ' + hidden : shown;
     let s = 0, all = true;
     for (const t of toks){
