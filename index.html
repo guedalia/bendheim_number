@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<meta name="build" content="3f37576703">
+<meta name="build" content="23712fb5f6">
 <title>Bendheim &mdash; Family Numbers</title>
 <style>
 :root{
@@ -57,6 +57,12 @@ td.mono{width:130px}
 code{font-family:var(--mono);font-size:13px;background:var(--panel);padding:1px 5px;border-radius:3px}
 ul.plain{margin:6px 0 0;padding-left:20px;font-size:13px}
 footer{margin:34px 0 8px;color:var(--dim);font-size:12.5px;text-align:center;font-style:italic}
+.rel{margin-top:8px;font-size:15px;font-weight:600;color:var(--accent);background:var(--accent-soft);
+     display:inline-block;padding:5px 11px;border-radius:6px}
+.rel.you{background:var(--good);color:#2f6b45}
+.rel.none{background:var(--panel);color:var(--dim);font-weight:400;font-size:13px}
+button.link{background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;font-size:12px;padding:0 2px}
+.pill{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:1px 5px}
 @media (max-width:430px){
   main{padding:14px}
   header{padding:14px 16px}
@@ -81,6 +87,7 @@ footer{margin:34px 0 8px;color:var(--dim);font-size:12.5px;text-align:center;fon
 <header>
   <h1 id="title">Family Numbers</h1>
   <div class="sub" id="counts"></div>
+  <div class="sub" id="you"></div>
 </header>
 <main>
 
@@ -145,7 +152,7 @@ function checkData(d){
   }
   return problems;
 }
-function boot(d, sourceLabel){
+function boot(d){
   const problems = checkData(d);
   const bootEl = document.getElementById('boot');
   if (problems.length && !d.people) { showLoadHelp(problems); return; }
@@ -155,13 +162,14 @@ function boot(d, sourceLabel){
   document.getElementById('app').style.display = '';
   document.getElementById('title').textContent = (DATA.root_name || 'Family').replace(/\s*\(.*?\)\s*/g,' ').trim() + ' — Family Numbers';
   document.getElementById('counts').textContent = (DATA.root_name || '') + ' (' + DATA.root + ') and everyone below him · ' +
-    people.length + ' people' + (sourceLabel ? ' · ' + sourceLabel : '');
+    people.length + ' people';
   bootEl.innerHTML = problems.length
     ? '<div class="note err"><b>' + problems.length + ' thing' + (problems.length > 1 ? 's' : '') +
       ' to fix in family_data.js</b> — the app still works, but these people will not behave correctly:<ul class="plain">' +
       problems.slice(0, 10).map(x => '<li>' + esc(x) + '</li>').join('') +
       (problems.length > 10 ? '<li>and ' + (problems.length - 10) + ' more</li>' : '') + '</ul></div>'
     : '';
+  renderYou();
   document.getElementById('q').focus();
 }
 function showLoadHelp(problems){
@@ -181,7 +189,7 @@ function showLoadHelp(problems){
       const i = txt.indexOf('{');
       if (i > 0) txt = txt.slice(i);
       txt = txt.replace(/;\s*$/, '');
-      try { boot(JSON.parse(txt), 'loaded from ' + f.name); document.getElementById('boot').innerHTML = ''; }
+      try { boot(JSON.parse(txt)); document.getElementById('boot').innerHTML = ''; }
       catch (err){ document.getElementById('pickerMsg').innerHTML = '<div class="note err">Could not read that file: ' + esc(err.message) + '</div>'; }
     };
     r.readAsText(f);
@@ -290,6 +298,90 @@ function numberForSpouse(memberPid){
   return {pid, kind:'spouse', anchor:m, siblings:[], notes};
 }
 
+/* ---- who you are, and how anyone is related to you ----
+   A clock-face number IS the path down from the root, so the relationship between two
+   people is arithmetic on their two paths: find the shared ancestor, then count the steps
+   down each side. The data records lineage, not sex, so the wording stays neutral —
+   "your niece or nephew", never a guess between the two. */
+const LS_ME = 'bendheim_me';
+let me = null;
+try { me = localStorage.getItem(LS_ME) || null; } catch(e){ me = null; }
+function setMe(pid){
+  me = pid;
+  try { pid ? localStorage.setItem(LS_ME, pid) : localStorage.removeItem(LS_ME); } catch(e){}
+  renderYou();
+}
+const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
+const TIMES = ['', 'once', 'twice', 'three times', 'four times', 'five times', 'six times', 'seven times'];
+function ordinal(n){ return ORD[n] || (n + 'th'); }
+function removedText(n){ return n === 0 ? '' : ' ' + (TIMES[n] || (n + ' times')) + ' removed'; }
+function greatStep(n, word){
+  // n steps apart: 1 = parent/child, 2 = grandparent/grandchild, 3 = great-grand...
+  if (n === 1) return word;
+  return 'great-'.repeat(n - 2) + 'grand' + word;
+}
+
+// The shape of the blood relationship between two numbers, before any wording.
+function coreRelation(aCore, bCore){
+  if (aCore === bCore) return {kind: 'self'};
+  const a = aCore.split('.'), b = bCore.split('.');
+  let L = 0;
+  while (L < a.length && L < b.length && a[L] === b[L]) L++;
+  if (L === 0) return null;
+  const da = a.length - L, db = b.length - L;
+  if (da === 0) return {kind: 'descendant', steps: db};
+  if (db === 0) return {kind: 'ancestor', steps: da};
+  if (da === 1 && db === 1) return {kind: 'sibling'};
+  if (da === 1) return {kind: 'nephew', steps: db - 1};       // 1 = niece/nephew, 2 = grand-niece
+  if (db === 1) return {kind: 'uncle', steps: da - 1};        // 1 = aunt/uncle, 2 = great-aunt
+  return {kind: 'cousin', degree: Math.min(da, db) - 1, removed: Math.abs(da - db)};
+}
+
+function relWords(r){
+  switch (r.kind){
+    case 'descendant': return greatStep(r.steps, 'child');
+    case 'ancestor':   return greatStep(r.steps, 'parent');
+    case 'sibling':    return 'sibling';
+    case 'nephew':     return (r.steps === 1 ? '' : 'great-'.repeat(r.steps - 2) + 'grand-') + 'niece or nephew';
+    case 'uncle':      return (r.steps === 1 ? '' : 'great-'.repeat(r.steps - 1)) + 'aunt or uncle';
+    case 'cousin':     return ordinal(r.degree) + ' cousin' + removedText(r.removed);
+  }
+  return '';
+}
+
+function relationship(mePid, otherPid){
+  if (!mePid || !otherPid) return '';
+  if (mePid === otherPid) return 'this is you';
+  const A = byPid.get(mePid), B = byPid.get(otherPid);
+  if (!A || !B) return '';
+  const aIn = !!A.sfx, bIn = !!B.sfx;
+  if (A.core === B.core) return aIn && bIn ? 'married to the same person as you' : 'your spouse';
+  const r = coreRelation(A.core, B.core);
+  if (!r || r.kind === 'self') return '';
+  const w = relWords(r);
+  if (!w) return '';
+  if (!aIn && !bIn) return 'your ' + w;                       // both blood
+  if (!aIn && bIn)  return 'married to your ' + w;             // they married into your family
+  // you married in: their descendants are yours too, the rest is by marriage
+  if (r.kind === 'descendant') return (bIn ? 'married to your ' : 'your ') + w;
+  const inLaw = {sibling: 'your sibling-in-law'};
+  if (r.kind === 'ancestor' && r.steps === 1) return bIn ? 'married to your parent-in-law' : 'your parent-in-law';
+  if (inLaw[r.kind]) return bIn ? 'married to ' + inLaw[r.kind] : inLaw[r.kind];
+  return (bIn ? 'married to your spouse’s ' : 'your spouse’s ') + w;
+}
+
+function renderYou(){
+  const el = document.getElementById('you');
+  if (!el) return;
+  const p = me ? byPid.get(me) : null;
+  el.innerHTML = p
+    ? 'You: <b>' + esc(p.name) + '</b> <span class="pill">' + esc(p.pid) + '</span> ' +
+      '<button class="link" id="clearMe">not me</button>'
+    : '';
+  const c = document.getElementById('clearMe');
+  if (c) c.onclick = () => { setMe(null); if (current) show(current); };
+}
+
 /* ---- screen ---- */
 function personRow(p){
   return '<div class="hit" data-pid="' + esc(p.pid) + '"><span class="n">' + esc(p.pid) + '</span><span>' + esc(p.name) + '</span>' +
@@ -310,9 +402,70 @@ function bindSearch(){
     el.querySelectorAll('.hit').forEach(d => d.onclick = () => goto(d.dataset.pid));
   };
 }
+/* ---- the URL is the current view ----
+   ?p=<number> is the person on screen, &for=child|spouse the number being shown for them.
+   Every move pushes a history entry, so reload keeps your place and Back steps back. */
+let suppressPush = false;
+function viewUrl(pid, forWhat){
+  const q = new URLSearchParams(location.search);
+  q.set('p', pid);
+  forWhat ? q.set('for', forWhat) : q.delete('for');
+  return location.pathname + '?' + q.toString();
+}
+function pushView(pid, forWhat, replace){
+  if (suppressPush) return;
+  const url = viewUrl(pid, forWhat);
+  if (location.pathname + location.search === url) return;
+  try { history[replace ? 'replaceState' : 'pushState']({pid, forWhat}, '', url); } catch(e){}
+}
+// A number in the URL that is not in the data file is someone we just worked out — hold
+// them in memory for this view only. Rebuilding this from the URL on every navigation is
+// what makes Back and Forward give the same answers as the first time round.
+function ensurePerson(pid){
+  const found = byPid.get(pid);
+  if (found) return found;
+  if (!PID_OK.test(pid)) return null;
+  const sp = splitPid(pid);
+  const anchor = byPid.get(sp.core) || byPid.get(sp.core.replace(/\.\d+$/, ''));
+  if (!anchor) return null;
+  provisional.push({pid, core: sp.core, sfx: sp.sfx, name: '(the new person, ' + pid + ')', prov: true});
+  index();
+  return byPid.get(pid);
+}
+function applyUrl(replace){
+  const q = new URLSearchParams(location.search);
+  const pid = q.get('p'), forWhat = q.get('for');
+  if (!pid) return false;
+  if (provisional.length){ provisional = []; index(); }
+  const person = ensurePerson(pid);
+  if (!person){
+    document.getElementById('out').innerHTML =
+      '<div class="note">Nobody in the data file has the number <code>' + esc(pid) + '</code>.</div>';
+    return false;
+  }
+  suppressPush = true;
+  show(person);
+  if (forWhat === 'child' || forWhat === 'spouse') give(forWhat);
+  suppressPush = false;
+  if (replace) pushView(pid, forWhat, true);
+  return true;
+}
+addEventListener('popstate', () => {
+  const q = new URLSearchParams(location.search);
+  if (!q.get('p')){
+    document.getElementById('person').innerHTML = '';
+    document.getElementById('out').innerHTML = '';
+    document.getElementById('q').value = '';
+    current = null;
+    return;
+  }
+  applyUrl(false);
+});
+
 function goto(pid){
   const target = byPid.get(pid);
   if (provisional.length && target && !target.prov){ provisional = []; index(); }
+  pushView(pid, null);
   show(byPid.get(pid));
 }
 function show(p, keepResult){
@@ -328,9 +481,15 @@ function show(p, keepResult){
   const marriedTo = p.sfx ? byPid.get(p.core) : null;
   const sibs = p.sfx ? [] : childrenOf(parentCoreOf(p.core));
   const line = lineage(p.core).filter(l => l.core !== p.core);
+  const rel = me ? relationship(me, p.pid) : '';
   let h = '<div class="card"><div class="who">' + esc(p.name) + '</div>' +
     '<div class="mynum">' + esc(p.pid) + '</div>' +
     (p.sfx? '<div class="dim small">' + esc(roleName(p.sfx)) + ' of ' + esc((byPid.get(p.core)||{}).name || p.core) + '</div>' : '') +
+    (rel === 'this is you' ? '<div class="rel you">This is you</div>'
+      : rel ? '<div class="rel">' + esc(rel.charAt(0).toUpperCase() + rel.slice(1)) + '</div>'
+      : me ? '<div class="rel none">No relationship I can work out from the numbers</div>' : '') +
+    '<div class="btns noprint" style="margin-top:12px"><button class="ghost" id="meBtn">' +
+      (me === p.pid ? 'Not me' : 'This is me') + '</button></div>' +
     '<h3>Give me the number for</h3><div class="btns" style="margin-top:0">' +
       '<button class="big" data-do="spouse">Their spouse</button>' +
       '<button class="big" data-do="child">Their next child</button>' +
@@ -348,6 +507,8 @@ function show(p, keepResult){
   el.innerHTML = h;
   el.querySelectorAll('.hit').forEach(d => d.onclick = () => goto(d.dataset.pid));
   el.querySelectorAll('button[data-do]').forEach(b => b.onclick = () => give(b.dataset.do));
+  const mb = document.getElementById('meBtn');
+  if (mb) mb.onclick = () => { setMe(me === p.pid ? null : p.pid); show(p); };
 }
 function give(kind){
   const p = current;
@@ -367,17 +528,17 @@ function give(kind){
       nameNumberTable(res.siblings.concat([{pid:res.pid, name:'← the new one'}]), res.pid) + '</div>';
   out.innerHTML = h;
   out.querySelectorAll('button[data-next]').forEach(b => b.onclick = () => stepDown(res.pid, b.dataset.next));
+  pushView(p.pid, kind);
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function stepDown(pid, nextKind){
-  if (!byPid.get(pid)){
-    const sp = splitPid(pid);
-    provisional.push({pid, core:sp.core, sfx:sp.sfx, name:'(the new person, ' + pid + ')', prov:true});
-    index();
-  }
+  ensurePerson(pid);
   current = byPid.get(pid);
+  suppressPush = true;
   give(nextKind);
   show(current, true);
+  suppressPush = false;
+  pushView(pid, nextKind);
 }
 
 /* ---- keep the page honest ----
@@ -395,15 +556,21 @@ function stepDown(pid, nextKind){
       if (!latest || latest === stamp) return;
       if (sessionStorage.getItem('reloadedFor') === latest) return;
       sessionStorage.setItem('reloadedFor', latest);
-      location.replace(location.pathname + '?b=' + latest);
+      const q = new URLSearchParams(location.search);
+      q.set('b', latest);
+      location.replace(location.pathname + '?' + q.toString());
     })
     .catch(() => {});
 })();
 
 /* ---- start ---- */
 bindSearch();
-if (window.FAMILY_DATA) boot(window.FAMILY_DATA, 'family_data.js');
-else showLoadHelp(['family_data.js was not found next to this page.']);
+if (window.FAMILY_DATA){
+  boot(window.FAMILY_DATA);
+  applyUrl(true);
+} else {
+  showLoadHelp(['family_data.js was not found next to this page.']);
+}
 </script>
 </body>
 </html>
