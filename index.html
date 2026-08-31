@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<meta name="build" content="23712fb5f6">
+<meta name="build" content="b38fe9a15e">
 <title>Bendheim &mdash; Family Numbers</title>
 <style>
 :root{
@@ -488,8 +488,10 @@ function show(p, keepResult){
     (rel === 'this is you' ? '<div class="rel you">This is you</div>'
       : rel ? '<div class="rel">' + esc(rel.charAt(0).toUpperCase() + rel.slice(1)) + '</div>'
       : me ? '<div class="rel none">No relationship I can work out from the numbers</div>' : '') +
-    '<div class="btns noprint" style="margin-top:12px"><button class="ghost" id="meBtn">' +
-      (me === p.pid ? 'Not me' : 'This is me') + '</button></div>' +
+    // once you have said who you are, the button is only offered on your own card
+    (!me ? '<div class="btns noprint" style="margin-top:12px"><button class="ghost" id="meBtn">This is me</button></div>'
+     : me === p.pid ? '<div class="btns noprint" style="margin-top:12px"><button class="ghost" id="meBtn">This is not me</button></div>'
+     : '') +
     '<h3>Give me the number for</h3><div class="btns" style="margin-top:0">' +
       '<button class="big" data-do="spouse">Their spouse</button>' +
       '<button class="big" data-do="child">Their next child</button>' +
