@@ -44,6 +44,9 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
 .kid .nm:hover{color:var(--accent);text-decoration:underline}
 .kid .ct{color:var(--dim);font-size:12.5px;white-space:nowrap}
 .kid .ord{display:flex;gap:4px}
+.kid{cursor:grab}
+.kid.dragging{opacity:.45}
+.kid.over{background:var(--accent-soft);outline:2px dashed var(--accent);outline-offset:-2px}
 .empty{color:var(--dim);font-size:14px;padding:10px 2px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .note{border-inline-start:3px solid var(--warn-line);background:var(--warn);padding:10px 13px;
@@ -176,7 +179,9 @@ function render(){
   h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">ז״ל</span>' : '') + '</div>';
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
-  if (p.spouse) bits.push('נשוי/אה ל' + esc(p.spouse) + (p.spouse_maiden ? ' (לבית ' + esc(p.spouse_maiden) + ')' : ''));
+  if (p.spouse) bits.push('נשוי/אה ל' + esc(p.spouse)
+    + (p.spouse_maiden ? ' (לבית ' + esc(p.spouse_maiden) + ')' : '')
+    + (p.spouse_deceased ? ' ז״ל' : ''));
   if (p.note) bits.push(esc(p.note));
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
   const dc = descCount(p);
@@ -184,8 +189,8 @@ function render(){
      + (dc > kids.length ? ' · ' + dc + ' צאצאים בסך הכל' : '') + '</div>';
   h += '<div class="btns">'
      + '<button class="big" id="bAdd">+ הוסף ילד</button>'
+     + (p.spouse ? '' : '<button class="big" id="bSpouse">+ הוסף בן/בת זוג</button>')
      + '<button class="ghost" id="bEdit">ערוך</button>'
-     + (p.spouse ? '<button class="ghost" id="bSwap">החלף עם בן/בת הזוג</button>' : '')
      + (p.parent_id != null && kids.length === 0 ? '<button class="danger" id="bDel">מחק</button>' : '')
      + '</div>';
   h += '</div>';
@@ -200,7 +205,7 @@ function render(){
     h += '<div class="kids">';
     kids.forEach((k, i) => {
       const n = kidsOf(k).length;
-      h += '<div class="kid">'
+      h += '<div class="kid" data-id="' + k.id + '">'
          + '<span class="ord">'
          + '<button class="tiny" data-mv="' + k.id + '" data-d="-1"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
          + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
@@ -229,6 +234,7 @@ function form(p, isNew){
    + '<div><label>הערה</label><input type="text" id="fNote" value="' + v('note') + '"></div>'
    + '</div>'
    + '<label style="margin-top:12px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
+   + '<label><input type="checkbox" id="fSpDead"' + (p.spouse_deceased ? ' checked' : '') + '> בן/בת הזוג נפטר/ה (ז״ל)</label>'
    + '<div class="btns"><button class="big" id="fSave">שמירה</button>'
    + '<button class="ghost" id="fCancel">ביטול</button></div>'
    + '<div id="formMsg"></div></div>';
@@ -243,8 +249,10 @@ function wire(){
   const on = (id, fn) => { const e = $(id); if (e) e.onclick = fn; };
   on('bAdd',  () => { ADD = true;  EDIT = null; render(); });
   on('bEdit', () => { EDIT = true; ADD = false; render(); });
-  on('bSwap', swap);
   on('bDel',  del);
+  on('bSpouse', () => { EDIT = true; ADD = false; render();
+    const f = $('fSp'); if (f) f.focus(); });
+  wireDrag();
   on('fCancel', () => { EDIT = null; ADD = false; render(); });
   on('fSave', save);
 }
@@ -255,7 +263,8 @@ async function save(){
     name: $('fName').value.trim(), surname: $('fSur').value.trim(),
     maiden: $('fMaid').value.trim(), spouse: $('fSp').value.trim(),
     spouse_maiden: $('fSpMaid').value.trim(), note: $('fNote').value.trim(),
-    deceased: $('fDead').checked, updated_at: new Date().toISOString()
+    deceased: $('fDead').checked, spouse_deceased: $('fSpDead').checked,
+    updated_at: new Date().toISOString()
   };
   if (!row.name){ $('formMsg').innerHTML = '<div class="note err">צריך שם פרטי.</div>'; return; }
   $('fSave').disabled = true;
@@ -276,19 +285,37 @@ async function save(){
   EDIT = null; ADD = false; index(); counts(); render();
 }
 
-// The sheets do not agree on which half of a couple descends from the family - one writes
-// "Josh & Esti" although it is Esti who descends - so the wrong person can end up holding the
-// place in the tree. This swaps them without disturbing the children hanging underneath.
-async function swap(){
-  const p = CUR;
-  if (!confirm('להחליף? ' + esc(p.spouse) + ' יהיה/תהיה בן/בת המשפחה, ו' + esc(p.name) + ' בן/בת הזוג.')) return;
-  const row = {name: p.spouse, maiden: p.spouse_maiden || '',
-               spouse: p.name, spouse_maiden: p.maiden || '',
-               updated_at: new Date().toISOString()};
-  const r = await sb.from('tal_people').update(row).eq('id', p.id).select();
-  if (r.error){ alert(r.error.message); return; }
-  Object.assign(BYID.get(p.id), r.data[0]);
-  log(p.id, 'swap', row.name + ' <-> ' + row.spouse);
+// Drag a child up or down the list to change birth order. The arrows do the same thing one
+// step at a time; dragging is quicker when a family has ten children and one is in the wrong
+// half of the list.
+let DRAG = null;
+function wireDrag(){
+  document.querySelectorAll('.kid').forEach(el => {
+    el.draggable = true;
+    el.ondragstart = e => { DRAG = +el.dataset.id; el.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move'; };
+    el.ondragend   = () => { DRAG = null; document.querySelectorAll('.kid')
+                             .forEach(k => k.classList.remove('dragging', 'over')); };
+    el.ondragover  = e => { e.preventDefault(); if (+el.dataset.id !== DRAG) el.classList.add('over'); };
+    el.ondragleave = () => el.classList.remove('over');
+    el.ondrop      = e => { e.preventDefault(); el.classList.remove('over');
+                            if (DRAG && +el.dataset.id !== DRAG) reorder(DRAG, +el.dataset.id); };
+  });
+}
+
+async function reorder(dragId, dropId){
+  const sibs = kidsOf(BYID.get(BYID.get(dragId).parent_id)).slice();
+  const from = sibs.findIndex(s => s.id === dragId);
+  const to   = sibs.findIndex(s => s.id === dropId);
+  if (from < 0 || to < 0) return;
+  sibs.splice(to, 0, sibs.splice(from, 1)[0]);
+  const changed = sibs.filter((s, i) => s.sort_order !== i + 1);
+  for (let i = 0; i < sibs.length; i++) sibs[i].sort_order = i + 1;
+  for (const s of changed){
+    const r = await sb.from('tal_people').update({sort_order: s.sort_order}).eq('id', s.id);
+    if (r.error){ alert(r.error.message); return; }
+  }
+  log(dragId, 'move', BYID.get(dragId).name);
   index(); render();
 }
 
