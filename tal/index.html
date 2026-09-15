@@ -322,10 +322,64 @@ function log(pid, action, detail){
 }
 
 // ---------- search ----------
+// Searching has to survive three things at once: the tree mixes Hebrew given names with
+// Latin surnames; Hebrew spelling of the same name varies (אילת / איילת, נעם / נועם); and
+// people look for someone in whichever script comes to hand. So every field is searched,
+// Hebrew is normalised, and both sides are reduced to a consonant skeleton so that typing
+// "dalia" finds דליה.
+const FINALS = {'ם':'מ','ן':'נ','ץ':'צ','ף':'פ','ך':'כ'};
+
+function norm(s){
+  return (s || '').toLowerCase()
+    .replace(/[םןץףך]/g, c => FINALS[c])
+    .replace(/["'׳״’‘`\-]/g, '')
+    .replace(/י{2,}/g, 'י')
+    .replace(/ו{2,}/g, 'ו');
+}
+
+const HEB2LAT = {'א':'','ב':'b','ג':'g','ד':'d','ה':'h','ו':'',
+  'ז':'z','ח':'h','ט':'t','י':'','כ':'k','ל':'l','מ':'m',
+  'נ':'n','ס':'s','ע':'','פ':'f','צ':'z','ק':'k','ר':'r',
+  'ש':'s','ת':'t'};
+
+function skel(s){
+  let t = norm(s);
+  t = t.replace(/sh|ch|kh|tz|ts|ph/g, m => ({sh:'s',ch:'h',kh:'h',tz:'z',ts:'z',ph:'f'}[m]));
+  let out = '';
+  for (const c of t){
+    if (HEB2LAT[c] !== undefined) out += HEB2LAT[c];
+    // v and b are one letter in Hebrew (ב), so "tzvi" has to reach צבי
+    else if (/[a-z]/.test(c)) out += 'aeiouwy'.includes(c) ? '' : ({c: 'k', v: 'b'}[c] || c);
+    else if (/\s/.test(c)) out += ' ';
+  }
+  // a final ה is a vowel marker, not a consonant: דליה and "dalia" must reduce alike
+  return out.replace(/(.)\1+/g, '$1').replace(/\s+/g, ' ').trim()
+            .split(' ').map(w => w.replace(/h$/, '')).join(' ');
+}
+
+function hay(p){
+  return [p.name, p.surname, p.maiden, p.spouse, p.spouse_maiden, p.name_en]
+    .filter(Boolean).join(' ');
+}
+
 function search(){
   const q = $('q').value.trim();
   if (q.length < 2){ $('hits').innerHTML = ''; return; }
-  const hit = PEOPLE.filter(p => (fullName(p) + ' ' + (p.spouse || '')).includes(q)).slice(0, 30);
+  const nq = norm(q), sq = skel(q);
+  const scored = [];
+  PEOPLE.forEach(p => {
+    const h = hay(p), nh = norm(h);
+    let s = 0;
+    // a name that STARTS with what was typed beats one that merely contains it, so
+    // searching "dalia" does not bury דליה under everyone surnamed Guedalia
+    const sh = skel(h).split(' ');
+    if (nh.split(/\s+/).some(w => w.startsWith(nq))) s = 5;
+    else if (sq.length >= 2 && sh.includes(sq)) s = 4;          // same name, other script
+    else if (nh.includes(nq)) s = 3;
+    else if (sq.length >= 2 && sh.some(w => w.startsWith(sq))) s = 2;
+    if (s) scored.push([s, p]);
+  });
+  const hit = scored.sort((a, b) => b[0] - a[0]).map(x => x[1]).slice(0, 30);
   $('hits').innerHTML = hit.length
     ? '<div class="hits">' + hit.map(p => '<div class="hit" data-go="' + p.id + '">'
         + '<div>' + esc(fullName(p)) + '</div><div class="p">'
