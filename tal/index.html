@@ -96,6 +96,19 @@ footer{margin:30px 0 10px;color:var(--dim);font-size:12.5px;text-align:center}
   </div>
 
   <div id="app" style="display:none">
+    <div class="card" id="pwCard" style="display:none;border-color:var(--accent)">
+      <div class="who" style="font-size:17px;margin-bottom:10px">שינוי סיסמה</div>
+      <label for="pw1">סיסמה חדשה (לפחות 8 תווים)</label>
+      <input type="password" id="pw1" autocomplete="new-password">
+      <label for="pw2" style="margin-top:10px">שוב, לאימות</label>
+      <input type="password" id="pw2" autocomplete="new-password">
+      <div class="btns">
+        <button class="big" id="pwSave">שמירה</button>
+        <button class="ghost" id="pwCancel">ביטול</button>
+      </div>
+      <div id="pwMsg"></div>
+      <div class="note info">הסיסמה משותפת לכולם. אחרי השינוי צריך למסור אותה שוב לכל מי שעורך.</div>
+    </div>
     <div class="card">
       <label for="q">חיפוש</label>
       <input type="text" id="q" placeholder="שם...">
@@ -339,8 +352,25 @@ async function load(){
   $('login').style.display = 'none';
   $('app').style.display = '';
   $('whoami').innerHTML = '<span class="sub">' + esc(window.__email || '') + '</span>'
+    + ' <button class="ghost" id="pwBtn">סיסמה</button>'
     + ' <button class="ghost" id="out">יציאה</button>';
   $('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  $('pwBtn').onclick = () => {
+    $('pwCard').style.display = ''; $('pwMsg').innerHTML = '';
+    $('pw1').value = ''; $('pw2').value = ''; $('pw1').focus();
+  };
+  $('pwCancel').onclick = () => { $('pwCard').style.display = 'none'; };
+  $('pwSave').onclick = async () => {
+    const a = $('pw1').value, b = $('pw2').value;
+    if (a.length < 8){ $('pwMsg').innerHTML = '<div class="note err">לפחות 8 תווים.</div>'; return; }
+    if (a !== b){ $('pwMsg').innerHTML = '<div class="note err">שתי הסיסמאות לא זהות.</div>'; return; }
+    $('pwSave').disabled = true;
+    const { error } = await sb.auth.updateUser({ password: a });
+    $('pwSave').disabled = false;
+    if (error){ $('pwMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
+    $('pwMsg').innerHTML = '<div class="note ok">הסיסמה שונתה.</div>';
+    $('pw1').value = ''; $('pw2').value = '';
+  };
   $('foot').textContent = 'כל שינוי נשמר מיד ונראה לכולם.';
   render();
 }
