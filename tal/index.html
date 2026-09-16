@@ -135,10 +135,16 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
 
 let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, ADD = false;
 
+// A spouse is a person in their own right, attached through spouse_of rather than parent_id,
+// so they can carry their own surname, birth name and dates. Children still hang off the
+// family member, so a spouse never appears in the list of children.
+let SPOUSE = new Map();
+
 function index(){
-  BYID = new Map(); KIDS = new Map();
+  BYID = new Map(); KIDS = new Map(); SPOUSE = new Map();
   PEOPLE.forEach(p => BYID.set(p.id, p));
   PEOPLE.forEach(p => {
+    if (p.spouse_of != null){ SPOUSE.set(p.spouse_of, p); return; }
     const k = p.parent_id == null ? 'root' : p.parent_id;
     if (!KIDS.has(k)) KIDS.set(k, []);
     KIDS.get(k).push(p);
@@ -146,6 +152,8 @@ function index(){
   KIDS.forEach(a => a.sort((x, y) => (x.sort_order - y.sort_order) || x.id - y.id));
 }
 const kidsOf = p => KIDS.get(p == null ? 'root' : p.id) || [];
+const spouseOf = p => (p && p.spouse_of == null) ? SPOUSE.get(p.id) : null;
+const partnerOf = p => (p && p.spouse_of != null) ? BYID.get(p.spouse_of) : null;
 const root = () => (KIDS.get('root') || [])[0];
 
 function fullName(p){
@@ -170,7 +178,8 @@ function descCount(p){
 function render(){
   if (!CUR) CUR = root();
   if (!CUR){ $('person').innerHTML = '<div class="note err">אין נתונים.</div>'; return; }
-  const p = CUR, kids = kidsOf(p), path = pathOf(p);
+  const p = CUR, mate = spouseOf(p), owner = partnerOf(p);
+  const kids = kidsOf(owner || p), path = pathOf(owner || p);
   const crumb = path.slice(0, -1).map(a =>
       '<button class="link" data-go="' + a.id + '">' + esc(a.name) + '</button>').join(' ‹ ');
 
@@ -179,24 +188,33 @@ function render(){
   h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">ז״ל</span>' : '') + '</div>';
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
-  if (p.spouse) bits.push('נשוי/אה ל' + esc(p.spouse)
-    + (p.spouse_maiden ? ' (לבית ' + esc(p.spouse_maiden) + ')' : '')
-    + (p.spouse_deceased ? ' ז״ל' : ''));
   if (p.note) bits.push(esc(p.note));
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
-  const dc = descCount(p);
-  h += '<div class="meta">' + (kids.length ? kids.length + ' ילדים' : 'אין ילדים רשומים')
-     + (dc > kids.length ? ' · ' + dc + ' צאצאים בסך הכל' : '') + '</div>';
+  if (owner){
+    h += '<div class="meta">בן/בת הזוג של <button class="link" data-go="' + owner.id + '">'
+       + esc(fullName(owner)) + '</button></div>';
+  } else if (mate){
+    h += '<div class="meta">נשוי/אה ל<button class="link" data-go="' + mate.id + '">'
+       + esc(fullName(mate)) + '</button>' + (mate.deceased ? ' <span class="dead">ז״ל</span>' : '')
+       + '</div>';
+  }
+  if (!owner){
+    const dc = descCount(p);
+    h += '<div class="meta">' + (kids.length ? kids.length + ' ילדים' : 'אין ילדים רשומים')
+       + (dc > kids.length ? ' · ' + dc + ' צאצאים בסך הכל' : '') + '</div>';
+  }
   h += '<div class="btns">'
-     + '<button class="big" id="bAdd">+ הוסף ילד</button>'
-     + (p.spouse ? '' : '<button class="big" id="bSpouse">+ הוסף בן/בת זוג</button>')
+     + (owner ? '' : '<button class="big" id="bAdd">+ הוסף ילד</button>')
+     + (owner || mate ? '' : '<button class="big" id="bSpouse">+ הוסף בן/בת זוג</button>')
      + '<button class="ghost" id="bEdit">ערוך</button>'
-     + (p.parent_id != null && kids.length === 0 ? '<button class="danger" id="bDel">מחק</button>' : '')
+     + ((owner || (p.parent_id != null && kids.length === 0)) ? '<button class="danger" id="bDel">מחק</button>' : '')
      + '</div>';
   h += '</div>';
 
   if (EDIT) h += form(p, false);
-  if (ADD)  h += form({name:'',surname:p.surname||'',maiden:'',spouse:'',spouse_maiden:'',note:'',deceased:false}, true);
+  if (ADD)  h += form({name:'', surname:p.surname||'', maiden:'', note:'', deceased:false}, true);
+
+  if (owner) { $('person').innerHTML = h; wire(); return; }
 
   h += '<h3>הילדים</h3>';
   if (!kids.length){
@@ -224,17 +242,15 @@ function render(){
 function form(p, isNew){
   const v = (x) => esc(p[x] || '');
   return '<div class="card" style="border-color:var(--accent)">'
-   + '<div class="who" style="font-size:17px;margin-bottom:12px">' + (isNew ? 'ילד/ה חדש/ה' : 'עריכה') + '</div>'
+   + '<div class="who" style="font-size:17px;margin-bottom:12px">' + (isNew === 'spouse' ? 'בן/בת זוג חדש/ה' : isNew ? 'ילד/ה חדש/ה' : 'עריכה') + '</div>'
    + '<div class="grid">'
    + '<div><label>שם פרטי</label><input type="text" id="fName" value="' + v('name') + '"></div>'
    + '<div><label>שם משפחה</label><input type="text" id="fSur" value="' + v('surname') + '"></div>'
    + '<div><label>שם לידה / נעורים</label><input type="text" id="fMaid" value="' + v('maiden') + '"></div>'
-   + '<div><label>בן/בת זוג</label><input type="text" id="fSp" value="' + v('spouse') + '"></div>'
-   + '<div><label>שם נעורים של בן/בת הזוג</label><input type="text" id="fSpMaid" value="' + v('spouse_maiden') + '"></div>'
+   + '<div><label>שם באנגלית</label><input type="text" id="fEn" value="' + v('name_en') + '"></div>'
    + '<div><label>הערה</label><input type="text" id="fNote" value="' + v('note') + '"></div>'
    + '</div>'
    + '<label style="margin-top:12px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
-   + '<label><input type="checkbox" id="fSpDead"' + (p.spouse_deceased ? ' checked' : '') + '> בן/בת הזוג נפטר/ה (ז״ל)</label>'
    + '<div class="btns"><button class="big" id="fSave">שמירה</button>'
    + '<button class="ghost" id="fCancel">ביטול</button></div>'
    + '<div id="formMsg"></div></div>';
@@ -250,8 +266,8 @@ function wire(){
   on('bAdd',  () => { ADD = true;  EDIT = null; render(); });
   on('bEdit', () => { EDIT = true; ADD = false; render(); });
   on('bDel',  del);
-  on('bSpouse', () => { EDIT = true; ADD = false; render();
-    const f = $('fSp'); if (f) f.focus(); });
+  on('bSpouse', () => { ADD = 'spouse'; EDIT = null; render();
+    const f = $('fName'); if (f) f.focus(); });
   wireDrag();
   on('fCancel', () => { EDIT = null; ADD = false; render(); });
   on('fSave', save);
@@ -261,15 +277,19 @@ function wire(){
 async function save(){
   const row = {
     name: $('fName').value.trim(), surname: $('fSur').value.trim(),
-    maiden: $('fMaid').value.trim(), spouse: $('fSp').value.trim(),
-    spouse_maiden: $('fSpMaid').value.trim(), note: $('fNote').value.trim(),
-    deceased: $('fDead').checked, spouse_deceased: $('fSpDead').checked,
+    maiden: $('fMaid').value.trim(), name_en: $('fEn').value.trim(),
+    note: $('fNote').value.trim(), deceased: $('fDead').checked,
     updated_at: new Date().toISOString()
   };
   if (!row.name){ $('formMsg').innerHTML = '<div class="note err">צריך שם פרטי.</div>'; return; }
   $('fSave').disabled = true;
   let err;
-  if (ADD){
+  if (ADD === 'spouse'){
+    row.spouse_of = CUR.id;
+    const r = await sb.from('tal_people').insert(row).select();
+    err = r.error;
+    if (!err){ PEOPLE.push(r.data[0]); log(r.data[0].id, 'add spouse', row.name); }
+  } else if (ADD){
     const sibs = kidsOf(CUR);
     row.parent_id = CUR.id;
     row.sort_order = sibs.length ? sibs[sibs.length - 1].sort_order + 1 : 1;
@@ -335,7 +355,7 @@ async function move(id, d){
 
 async function del(){
   if (!confirm('למחוק את ' + fullName(CUR) + '?')) return;
-  const id = CUR.id, up = CUR.parent_id;
+  const id = CUR.id, up = CUR.spouse_of != null ? CUR.spouse_of : CUR.parent_id;
   const r = await sb.from('tal_people').delete().eq('id', id);
   if (r.error){ alert(r.error.message); return; }
   log(id, 'delete', CUR.name);
