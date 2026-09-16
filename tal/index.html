@@ -60,6 +60,10 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
 .note.ok{border-inline-start-color:var(--good-line);background:var(--good)}
 .note.info{border-inline-start-color:var(--accent);background:var(--accent-soft)}
 .dead{font-size:12px;color:var(--dim)}
+.rel{margin-top:8px;display:inline-block;font-size:15px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);padding:5px 12px;border-radius:6px}
+.rel.me{background:var(--good);color:#2f6b45}
+.rel.none{background:var(--panel);color:var(--dim);font-weight:400;font-size:13.5px}
 .hits{border:1px solid var(--line);border-radius:8px;margin-top:8px;overflow:hidden;max-height:300px;overflow-y:auto}
 .hit{padding:9px 13px;border-bottom:1px solid var(--line);cursor:pointer}
 .hit:last-child{border-bottom:0}
@@ -234,7 +238,14 @@ function render(){
     h += '<div class="meta">' + (kids.length ? kids.length + ' ילדים' : 'אין ילדים רשומים')
        + (dc > kids.length ? ' · ' + dc + ' צאצאים בסך הכל' : '') + '</div>';
   }
+  if (ME && BYID.get(ME)){
+    const rel = relation(BYID.get(ME), p);
+    if (rel) h += '<div class="rel' + (ME === p.id ? ' me' : '') + '">' + esc(rel) + '</div>';
+    else h += '<div class="rel none">אין קשר דם ישיר</div>';
+  }
   h += '<div class="btns">'
+     + (!ME ? '<button class="ghost" id="bMe">זה אני</button>'
+            : ME === p.id ? '<button class="ghost" id="bNotMe">זה לא אני</button>' : '')
      + (owner ? '' : '<button class="big" id="bAdd">+ הוסף ילד</button>')
      + (owner || mate ? '' : '<button class="big" id="bSpouse">+ הוסף בן/בת זוג</button>')
      + '<button class="ghost" id="bEdit">ערוך</button>'
@@ -307,6 +318,8 @@ function wire(){
   on('bAdd',  () => { ADD = true;  EDIT = null; render(); });
   on('bEdit', () => { EDIT = true; ADD = false; render(); });
   on('bDel',  del);
+  on('bMe',    () => setMe(CUR.id));
+  on('bNotMe', () => setMe(null));
   on('bSpouse', () => { ADD = 'spouse'; EDIT = null; render();
     const f = $('fName'); if (f) f.focus(); });
   wireDrag();
@@ -465,6 +478,73 @@ function log(pid, action, detail){
     who: (sb.auth.getUser && window.__email) || ''}).then(() => {}, () => {});
 }
 
+// ---------- how am I related to this person ----------
+// Both people are located by their path down from the root. The length of the shared prefix
+// gives the common ancestor; the steps each of them stands below it give the relationship.
+// A spouse has no path of their own, so they are answered through the person they married.
+let ME = null;
+try { ME = localStorage.getItem('tal_me'); ME = ME ? +ME : null; } catch (e) {}
+
+const pathIds = p => pathOf(p).map(x => x.id);
+const gendered = (p, m, f) => p.sex === 'F' ? f : (p.sex === 'M' ? m : m + '/' + f);
+
+function greats(n, m, f, p){
+  // 1 = parent, 2 = grandparent, 3 = great-grandparent...
+  if (n === 1) return gendered(p, 'אבא', 'אמא');
+  if (n === 2) return gendered(p, 'סבא', 'סבתא');
+  if (n === 3) return gendered(p, 'סבא רבא', 'סבתא רבתא');
+  return gendered(p, 'סבא', 'סבתא') + ' מדור ' + n;
+}
+function downs(n, p){
+  if (n === 1) return gendered(p, 'בן', 'בת');
+  if (n === 2) return gendered(p, 'נכד', 'נכדה');
+  if (n === 3) return gendered(p, 'נין', 'נינה');
+  return gendered(p, 'צאצא', 'צאצאית') + ' מדור ' + n;
+}
+
+function relation(me, them){
+  if (!me || !them) return '';
+  const myMate = partnerOf(me), theirMate = partnerOf(them);
+  const a = myMate || me, b = theirMate || them;
+  if (a.id === b.id){
+    if (me.id === them.id) return 'זה אני';
+    return gendered(them, 'בן הזוג שלי', 'בת הזוג שלי');
+  }
+  const pa = pathIds(a), pb = pathIds(b);
+  let L = 0;
+  while (L < pa.length && L < pb.length && pa[L] === pb[L]) L++;
+  const da = pa.length - L, db = pb.length - L;
+  let core;
+  if (L === 0) core = '';
+  else if (da === 0 && db === 0) core = 'אני';
+  else if (da === 0) core = 'ה' + downs(db, b) + ' שלי';
+  else if (db === 0) core = greats(da, 'אבא', 'אמא', b) + ' שלי';
+  else if (da === 1 && db === 1) core = gendered(b, 'אח שלי', 'אחות שלי');
+  else if (da === 1) core = 'ה' + (db === 2 ? gendered(b, 'אחיין', 'אחיינית')
+                                            : gendered(b, 'אחיין', 'אחיינית') + ' מדור ' + (db - 1)) + ' שלי';
+  else if (db === 1) core = (da === 2 ? gendered(b, 'דוד', 'דודה')
+                           : da === 3 ? gendered(b, 'דוד רבא', 'דודה רבתא')
+                                      : gendered(b, 'דוד', 'דודה') + ' מדור ' + (da - 1)) + ' שלי';
+  else {
+    const deg = Math.min(da, db) - 1, rem = Math.abs(da - db);
+    core = gendered(b, 'בן דוד', 'בת דודה')
+         + (deg > 1 ? ' מדרגה ' + deg : '') + ' שלי'
+         + (rem ? ' (' + rem + ' דורות הפרש)' : '');
+  }
+  if (!core) return '';
+  if (theirMate && myMate) return gendered(them, 'בן הזוג של ', 'בת הזוג של ') + core.replace(/^ה/, '');
+  if (theirMate) return gendered(them, 'בן הזוג של ', 'בת הזוג של ') + core.replace(/^ה/, '');
+  if (myMate) return core + ' — דרך ' + gendered(myMate, 'בן הזוג', 'בת הזוג') + ' שלי';
+  return core;
+}
+
+async function setMe(id){
+  ME = id;
+  try { id ? localStorage.setItem('tal_me', id) : localStorage.removeItem('tal_me'); } catch (e) {}
+  if (window.__setMeBtn) window.__setMeBtn();
+  render();
+}
+
 // ---------- the whole tree, as one long outline ----------
 function renderWhole(){
   const r = root();
@@ -605,10 +685,20 @@ async function load(){
   CUR = h ? (BYID.get(+h[1]) || root()) : root();
   $('login').style.display = 'none';
   $('app').style.display = '';
-  $('whoami').innerHTML = '<button class="ghost" id="treeBtn">כל העץ</button>'
+  $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
+    + ' <button class="ghost" id="treeBtn">כל העץ</button>'
     + ' <span class="sub">' + esc(window.__email || '') + '</span>'
     + ' <button class="ghost" id="pwBtn">סיסמה</button>'
     + ' <button class="ghost" id="out">יציאה</button>';
+  const setMeBtn = () => {
+    const m = ME && BYID.get(ME);
+    $('meBtn').textContent = m ? 'אני: ' + m.name : 'מי אני?';
+    $('meBtn').onclick = () => {
+      if (m){ CUR = m; location.hash = '#p' + m.id; showPerson(); render(); }
+      else alert('פתחו את הכרטיס שלכם בעץ ולחצו "זה אני".');
+    };
+  };
+  window.__setMeBtn = setMeBtn; setMeBtn();
   $('treeBtn').onclick = () => {
     if ($('whole').style.display === 'none'){ location.hash = '#tree'; showWhole(); }
     else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); }
