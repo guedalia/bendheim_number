@@ -18,6 +18,7 @@ header h1{font-size:18px;margin:0;font-weight:600}
 header .sub{color:var(--dim);font-size:13px}
 header .right{margin-inline-start:auto;display:flex;gap:8px;align-items:center}
 main{padding:20px;max-width:760px;margin:0 auto}
+body.wide main{max-width:none}
 .card{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
 label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
 input[type=text],input[type=password]{width:100%;padding:10px 12px;border:1px solid var(--line);
@@ -77,6 +78,17 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
   color:var(--accent);font-weight:600}
 .chain .node.top{border-style:dashed;border-width:2px}
 .chain .arr{color:var(--dim);font-size:15px;padding:0 1px}
+.canvas{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+  padding:10px;max-height:78vh}
+.canvas svg{display:block}
+.canvas .ln{stroke:#c9c9c4;stroke-width:1.5;fill:none}
+.canvas .bx rect{fill:#fff;stroke:var(--line);stroke-width:1.5}
+.canvas .bx{cursor:pointer}
+.canvas .bx:hover rect{stroke:var(--accent);stroke-width:2}
+.canvas .bx.cur rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.canvas .bx.me rect{fill:var(--good);stroke:var(--good-line);stroke-width:2}
+.canvas .t1{font:600 14px system-ui,sans-serif;fill:var(--ink);text-anchor:middle}
+.canvas .t2{font:400 12px system-ui,sans-serif;fill:var(--dim);text-anchor:middle}
 .hits{border:1px solid var(--line);border-radius:8px;margin-top:8px;overflow:hidden;max-height:300px;overflow-y:auto}
 .hit{padding:9px 13px;border-bottom:1px solid var(--line);cursor:pointer}
 .hit:last-child{border-bottom:0}
@@ -162,6 +174,7 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
     </div>
     <div id="person"></div>
     <div id="whole" style="display:none"></div>
+    <div id="draw" style="display:none"></div>
   </div>
 
   <footer id="foot"></footer>
@@ -596,6 +609,105 @@ async function setMe(id){
   render();
 }
 
+// ---------- the tree, drawn ----------
+// Laid out the way a family chart is: each generation a row, children side by side under
+// their parents, the parent centred over the span of its children. Widths are measured from
+// the bottom up so nothing overlaps however lopsided a branch is.
+const BOX_W = 176, BOX_H = 54, H_GAP = 16, ROW = 104;
+let ZOOM = 0;      // 0 means 'not chosen yet' - fit to the window on first draw
+
+function layout(p, depth, cursor){
+  const kids = kidsOf(p);
+  const node = {p: p, depth: depth, kids: []};
+  if (!kids.length){
+    node.x = cursor.x + BOX_W / 2;
+    cursor.x += BOX_W + H_GAP;
+  } else {
+    kids.forEach(c => node.kids.push(layout(c, depth + 1, cursor)));
+    node.x = (node.kids[0].x + node.kids[node.kids.length - 1].x) / 2;
+  }
+  node.y = depth * ROW;
+  return node;
+}
+
+function drawTree(rootPerson){
+  const cursor = {x: 0};
+  const tree = layout(rootPerson, 0, cursor);
+  const flat = [];
+  (function collect(n){ flat.push(n); n.kids.forEach(collect); })(tree);
+  const W = Math.max(cursor.x, BOX_W) + 40;
+  const H = (Math.max.apply(null, flat.map(n => n.depth)) + 1) * ROW + 20;
+  const cut = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+
+  let g = '';
+  flat.forEach(n => {
+    if (!n.kids.length) return;
+    const midY = n.y + BOX_H + (ROW - BOX_H) / 2;
+    g += '<path d="M' + n.x + ' ' + (n.y + BOX_H) + ' V' + midY + '" class="ln"/>';
+    const xs = n.kids.map(k => k.x);
+    g += '<path d="M' + Math.min.apply(null, xs) + ' ' + midY
+       + ' H' + Math.max.apply(null, xs) + '" class="ln"/>';
+    n.kids.forEach(k => {
+      g += '<path d="M' + k.x + ' ' + midY + ' V' + k.y + '" class="ln"/>';
+    });
+  });
+  flat.forEach(n => {
+    const p = n.p, m = spouseOf(p);
+    const x = n.x - BOX_W / 2;
+    g += '<g class="bx' + (p.id === CUR.id ? ' cur' : '') + (ME === p.id ? ' me' : '')
+       + '" data-go="' + p.id + '" transform="translate(' + x + ',' + n.y + ')">'
+       + '<rect width="' + BOX_W + '" height="' + BOX_H + '" rx="7"/>'
+       + '<text x="' + BOX_W / 2 + '" y="21" class="t1">'
+       + esc(cut((p.name + ' ' + (p.surname || '')).trim(), 22))
+       + (p.deceased ? ' ז"ל' : '') + '</text>'
+       + (m ? '<text x="' + BOX_W / 2 + '" y="39" class="t2">+ '
+              + esc(cut((m.name + ' ' + (m.surname || '')).trim(), 20))
+              + (m.deceased ? ' ז"ל' : '') + '</text>' : '')
+       + '</g>';
+  });
+  return '<svg viewBox="-20 -10 ' + W + ' ' + H + '" width="' + (W * ZOOM)
+       + '" height="' + (H * ZOOM) + '">' + g + '</svg>';
+}
+
+function renderDraw(){
+  const p = CUR && CUR.spouse_of == null ? CUR : (CUR ? partnerOf(CUR) : root());
+  const start = p || root();
+  if (!ZOOM){
+    // the whole tree is some 40,000px across, so start at whatever fits the window
+    const cur = {x: 0};
+    layout(start, 0, cur);
+    const avail = Math.max(320, ($('draw').clientWidth || innerWidth) - 60);
+    ZOOM = Math.max(0.03, Math.min(1, avail / (cur.x + 40)));
+  }
+  let n = 0;
+  (function c(x){ kidsOf(x).forEach(k => { n++; c(k); }); })(start);
+  $('draw').innerHTML = '<div class="card"><div class="who" style="font-size:19px">'
+    + esc(fullName(start)) + '</div>'
+    + '<div class="meta">' + n + ' צאצאים · לחיצה על שם פותחת אותו</div>'
+    + '<div class="btns"><button class="ghost" id="zIn">+ הגדל</button>'
+    + '<button class="ghost" id="zOut">− הקטן</button>'
+    + '<button class="ghost" id="zFit">התאם</button>'
+    + '<button class="ghost" id="zRoot">מראש העץ</button></div></div>'
+    + '<div class="canvas">' + drawTree(start) + '</div>';
+  $('zIn').onclick  = () => { ZOOM = Math.min(2, ZOOM * 1.25); renderDraw(); };
+  $('zOut').onclick = () => { ZOOM = Math.max(0.03, ZOOM / 1.25); renderDraw(); };
+  $('zFit').onclick  = () => { ZOOM = 0; renderDraw(); };
+  $('zRoot').onclick = () => { CUR = root(); ZOOM = 0; location.hash = '#draw'; renderDraw(); };
+  $('draw').querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+    CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false; ZOOM = 0;
+    location.hash = '#p' + CUR.id; showPerson(); render();
+  });
+}
+
+function showDraw(){
+  ZOOM = 0;
+  document.body.classList.add('wide');
+  $('person').style.display = 'none';
+  $('whole').style.display = 'none';
+  $('draw').style.display = '';
+  renderDraw();
+}
+
 // ---------- the whole tree, as one long outline ----------
 function renderWhole(){
   const r = root();
@@ -633,12 +745,16 @@ function renderWhole(){
 }
 
 function showWhole(){
+  document.body.classList.remove('wide');
+  $('draw').style.display = 'none';
   $('person').style.display = 'none';
   $('whole').style.display = '';
   const b = $('treeBtn'); if (b) b.textContent = 'חזרה';
   renderWhole();
 }
 function showPerson(){
+  document.body.classList.remove('wide');
+  $('draw').style.display = 'none';
   $('whole').style.display = 'none';
   $('person').style.display = '';
   const b = $('treeBtn'); if (b) b.textContent = 'כל העץ';
@@ -743,7 +859,8 @@ async function load(){
   $('login').style.display = 'none';
   $('app').style.display = '';
   $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
-    + ' <button class="ghost" id="treeBtn">כל העץ</button>'
+    + ' <button class="ghost" id="drawBtn">עץ מצויר</button>'
+    + ' <button class="ghost" id="treeBtn">רשימה</button>'
     + ' <span class="sub">' + esc(window.__email || '') + '</span>'
     + ' <button class="ghost" id="pwBtn">סיסמה</button>'
     + ' <button class="ghost" id="out">יציאה</button>';
@@ -756,6 +873,10 @@ async function load(){
     };
   };
   window.__setMeBtn = setMeBtn; setMeBtn();
+  $('drawBtn').onclick = () => {
+    if ($('draw').style.display === 'none'){ location.hash = '#draw'; showDraw(); }
+    else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); render(); }
+  };
   $('treeBtn').onclick = () => {
     if ($('whole').style.display === 'none'){ location.hash = '#tree'; showWhole(); }
     else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); }
@@ -780,6 +901,7 @@ async function load(){
   $('foot').textContent = 'כל שינוי נשמר מיד ונראה לכולם.';
   render();
   if (location.hash === '#tree') showWhole();
+  if (location.hash === '#draw') showDraw();
 }
 
 async function boot(){
@@ -808,6 +930,7 @@ $('q').oninput = search;
 addEventListener('hashchange', () => {
   if (!BYID.size) return;
   if (location.hash === '#tree'){ showWhole(); return; }
+  if (location.hash === '#draw'){ showDraw(); return; }
   const h = location.hash.match(/^#p(\d+)$/);
   if (h){ CUR = BYID.get(+h[1]) || CUR; EDIT = null; ADD = false; showPerson(); render(); }
 });
