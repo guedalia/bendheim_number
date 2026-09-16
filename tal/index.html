@@ -290,7 +290,6 @@ function form(p, isNew){
    + '<span class="sexpick">'
    + '<button type="button" class="sx' + (p.sex === 'M' ? ' on' : '') + '" data-sx="M">בן</button>'
    + '<button type="button" class="sx' + (p.sex === 'F' ? ' on' : '') + '" data-sx="F">בת</button>'
-   + '<button type="button" class="sx' + (!p.sex ? ' on' : '') + '" data-sx="">לא ידוע</button>'
    + '</span></div>'
    + '<label style="margin-top:10px"><input type="checkbox" id="fStep"' + (p.relation === 'step' ? ' checked' : '') + '> בן/בת חורג/ת</label>'
    + '<label style="margin-top:4px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
@@ -313,9 +312,11 @@ function wire(){
     const f = $('fName'); if (f) f.focus(); });
   wireDrag();
   on('fCancel', () => { EDIT = null; ADD = false; render(); });
+  // two choices only; clicking the one already chosen clears it back to not set
   document.querySelectorAll('.sx').forEach(b => b.onclick = () => {
-    PICKSEX = b.dataset.sx;
-    document.querySelectorAll('.sx').forEach(x => x.classList.toggle('on', x === b));
+    PICKSEX = (PICKSEX === b.dataset.sx) ? '' : b.dataset.sx;
+    document.querySelectorAll('.sx').forEach(x =>
+      x.classList.toggle('on', PICKSEX !== '' && x.dataset.sx === PICKSEX));
   });
   on('fSave', save);
 }
@@ -579,8 +580,22 @@ function search(){
   });
 }
 
+// The header names the couple everyone here descends from, and says how far they reached.
 function counts(){
-  $('counts').textContent = PEOPLE.length + ' אנשים';
+  const r = root();
+  if (!r){ $('counts').textContent = PEOPLE.length + ' אנשים'; return; }
+  const m = spouseOf(r);
+  const couple = [r, m].filter(Boolean);
+  const nm = couple.map(x => x.name).join(' ו') + (r.surname ? ' ' + r.surname : '');
+  let deepest = 0, blood = 0;
+  (function walk(p, d){
+    deepest = Math.max(deepest, d);
+    kidsOf(p).forEach(c => { blood++; walk(c, d + 1); });
+  })(r, 1);
+  document.querySelector('header h1').textContent = nm;
+  $('counts').textContent = blood + ' צאצאים · ' + deepest + ' דורות · '
+    + (PEOPLE.length - blood - couple.length) + ' בני/בנות זוג';
+  document.title = nm + ' — עץ המשפחה';
 }
 
 // ---------- boot ----------
