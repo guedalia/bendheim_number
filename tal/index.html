@@ -568,9 +568,12 @@ function renderWhole(){
     const k = kidsOf(p);
     return k.length ? '<ul>' + k.map(c => line(c, depth)).join('') + '</ul>' : '';
   };
-  const total = PEOPLE.filter(p => p.spouse_of == null).length;
+  // count the same way the header does: descendants of the root, not counting the root
+  let blood = 0;
+  (function walk(x){ kidsOf(x).forEach(c => { blood++; walk(c); }); })(r);
+  const mates = PEOPLE.filter(p => p.spouse_of != null).length;
   $('whole').innerHTML = '<div class="card"><div class="who" style="font-size:19px">כל העץ</div>'
-    + '<div class="meta">' + total + ' בני משפחה · ' + (PEOPLE.length - total) + ' בני/בנות זוג'
+    + '<div class="meta">' + blood + ' צאצאים · ' + mates + ' בני/בנות זוג'
     + ' · אפשר להדפיס מהדפדפן</div></div>'
     + '<ul class="full">' + line(r, 1) + '</ul>';
   document.querySelectorAll('#whole [data-go]').forEach(b => b.onclick = () => {
