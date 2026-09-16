@@ -263,7 +263,7 @@ function render(){
          + '</span>'
          + '<span class="nm" data-go="' + k.id + '">' + esc(fullName(k))
          + (k.deceased ? ' <span class="dead">ז״ל</span>' : '')
-         + (k.relation === 'step' ? ' <span class="dead">חורג/ת</span>' : '') + '</span>'
+ + '</span>'
          + '<span class="ct">' + (n ? n + ' ילדים' : '') + '</span>'
          + '</div>';
     });
@@ -291,7 +291,6 @@ function form(p, isNew){
    + '<button type="button" class="sx' + (p.sex === 'M' ? ' on' : '') + '" data-sx="M">בן</button>'
    + '<button type="button" class="sx' + (p.sex === 'F' ? ' on' : '') + '" data-sx="F">בת</button>'
    + '</span></div>'
-   + '<label style="margin-top:10px"><input type="checkbox" id="fStep"' + (p.relation === 'step' ? ' checked' : '') + '> בן/בת חורג/ת</label>'
    + '<label style="margin-top:4px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
    + '<div class="btns"><button class="big" id="fSave">שמירה</button>'
    + '<button class="ghost" id="fCancel">ביטול</button></div>'
@@ -328,7 +327,7 @@ async function save(){
     maiden: $('fMaid').value.trim(), name_en: $('fEn').value.trim(),
     born: $('fBorn').value.trim(), died: $('fDied').value.trim(), sex: PICKSEX,
     note: $('fNote').value.trim(), deceased: $('fDead').checked,
-    relation: $('fStep').checked ? 'step' : 'child',
+    relation: (ADD ? 'child' : (CUR.relation || 'child')),
     updated_at: new Date().toISOString()
   };
   const wasSurname = (ADD ? '' : (CUR.surname || '')).trim();
@@ -475,7 +474,6 @@ function renderWhole(){
     return '<li class="g' + depth + '">'
       + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
       + (p.deceased ? ' <span class="dead">ז״ל</span>' : '')
-      + (p.relation === 'step' ? ' <span class="dead">חורג/ת</span>' : '')
       + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
           + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
       + (m ? ' <span class="sp">· ' + esc(fullName(m))
