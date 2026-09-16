@@ -186,7 +186,10 @@ const root = () => (KIDS.get('root') || [])[0];
 function fullName(p){
   let n = p.name || '';
   if (p.surname) n += ' ' + p.surname;
-  if (p.maiden) n += ' (לבית ' + p.maiden + ')';
+  // "לבית" is née, so it only fits a woman. A man who changed surname - Tzvi, born
+  // Richter, who took Tal - still needs his birth name shown, just not called that.
+  if (p.maiden) n += p.sex === 'F' ? ' (לבית ' + p.maiden + ')'
+                                   : ' (שם לידה ' + p.maiden + ')';
   return n.trim();
 }
 function pathOf(p){
@@ -259,7 +262,8 @@ function render(){
          + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
          + '</span>'
          + '<span class="nm" data-go="' + k.id + '">' + esc(fullName(k))
-         + (k.deceased ? ' <span class="dead">ז״ל</span>' : '') + '</span>'
+         + (k.deceased ? ' <span class="dead">ז״ל</span>' : '')
+         + (k.relation === 'step' ? ' <span class="dead">חורג/ת</span>' : '') + '</span>'
          + '<span class="ct">' + (n ? n + ' ילדים' : '') + '</span>'
          + '</div>';
     });
@@ -288,7 +292,8 @@ function form(p, isNew){
    + '<button type="button" class="sx' + (p.sex === 'F' ? ' on' : '') + '" data-sx="F">בת</button>'
    + '<button type="button" class="sx' + (!p.sex ? ' on' : '') + '" data-sx="">לא ידוע</button>'
    + '</span></div>'
-   + '<label style="margin-top:10px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
+   + '<label style="margin-top:10px"><input type="checkbox" id="fStep"' + (p.relation === 'step' ? ' checked' : '') + '> בן/בת חורג/ת</label>'
+   + '<label style="margin-top:4px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
    + '<div class="btns"><button class="big" id="fSave">שמירה</button>'
    + '<button class="ghost" id="fCancel">ביטול</button></div>'
    + '<div id="formMsg"></div></div>';
@@ -322,6 +327,7 @@ async function save(){
     maiden: $('fMaid').value.trim(), name_en: $('fEn').value.trim(),
     born: $('fBorn').value.trim(), died: $('fDied').value.trim(), sex: PICKSEX,
     note: $('fNote').value.trim(), deceased: $('fDead').checked,
+    relation: $('fStep').checked ? 'step' : 'child',
     updated_at: new Date().toISOString()
   };
   const wasSurname = (ADD ? '' : (CUR.surname || '')).trim();
@@ -358,10 +364,10 @@ async function cascade(person, oldSur, newSur){
   const hit = [];
   (function walk(p){
     kidsOf(p).forEach(c => {
-      if ((c.surname || '').trim() === oldSur) hit.push(c);
+      if (c.relation !== 'step' && (c.surname || '').trim() === oldSur) hit.push(c);
       const m = SPOUSE.get(c.id);
       if (m && (m.surname || '').trim() === oldSur && c.sex === 'M') hit.push(m);
-      walk(c);
+      if (c.relation !== 'step') walk(c);
     });
   })(person);
   if (!hit.length) return;
@@ -468,6 +474,7 @@ function renderWhole(){
     return '<li class="g' + depth + '">'
       + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
       + (p.deceased ? ' <span class="dead">ז״ל</span>' : '')
+      + (p.relation === 'step' ? ' <span class="dead">חורג/ת</span>' : '')
       + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
           + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
       + (m ? ' <span class="sp">· ' + esc(fullName(m))
