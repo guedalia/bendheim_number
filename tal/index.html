@@ -64,6 +64,19 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
   background:var(--accent-soft);padding:5px 12px;border-radius:6px}
 .rel.me{background:var(--good);color:#2f6b45}
 .rel.none{background:var(--panel);color:var(--dim);font-weight:400;font-size:13.5px}
+.chainBtn{border:0;background:rgba(0,0,0,.06);color:inherit;font:inherit;font-size:12.5px;
+  padding:2px 9px;margin-inline-start:6px;border-radius:5px;cursor:pointer}
+.chainBtn:hover{background:rgba(0,0,0,.12)}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:10px;
+  padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.chain .node{background:var(--bg);border:1px solid var(--line);border-radius:6px;
+  padding:6px 11px;font-size:14px;cursor:pointer;white-space:nowrap}
+.chain .node:hover{border-color:var(--accent);color:var(--accent)}
+.chain .node.me{background:var(--good);border-color:var(--good-line);font-weight:600}
+.chain .node.them{background:var(--accent-soft);border-color:var(--accent);
+  color:var(--accent);font-weight:600}
+.chain .node.top{border-style:dashed;border-width:2px}
+.chain .arr{color:var(--dim);font-size:15px;padding:0 1px}
 .hits{border:1px solid var(--line);border-radius:8px;margin-top:8px;overflow:hidden;max-height:300px;overflow-y:auto}
 .hit{padding:9px 13px;border-bottom:1px solid var(--line);cursor:pointer}
 .hit:last-child{border-bottom:0}
@@ -166,6 +179,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
 
 let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, ADD = false;
 let PICKSEX = '';
+let SHOWCHAIN = false;
 
 // A spouse is a person in their own right, attached through spouse_of rather than parent_id,
 // so they can carry their own surname, birth name and dates. Children still hang off the
@@ -240,9 +254,14 @@ function render(){
        + (dc > kids.length ? ' · ' + dc + ' צאצאים בסך הכל' : '') + '</div>';
   }
   if (ME && BYID.get(ME)){
-    const rel = relation(BYID.get(ME), p);
-    if (rel) h += '<div class="rel' + (ME === p.id ? ' me' : '') + '">' + esc(rel) + '</div>';
-    else h += '<div class="rel none">אין קשר דם ישיר</div>';
+    const meP = BYID.get(ME), rel = relation(meP, p);
+    if (rel){
+      const chain = relChain(meP, p);
+      h += '<div class="rel' + (ME === p.id ? ' me' : '') + '">' + esc(rel)
+         + (chain.length > 1 ? ' <button class="chainBtn" id="bChain">'
+              + (SHOWCHAIN ? 'הסתר' : 'איך?') + '</button>' : '') + '</div>';
+      if (SHOWCHAIN) h += chainHtml(meP, p);
+    } else h += '<div class="rel none">אין קשר דם ישיר</div>';
   }
   h += '<div class="btns">'
      + (!ME ? '<button class="ghost" id="bMe">זה אני</button>'
@@ -319,6 +338,7 @@ function wire(){
   on('bAdd',  () => { ADD = true;  EDIT = null; render(); });
   on('bEdit', () => { EDIT = true; ADD = false; render(); });
   on('bDel',  del);
+  on('bChain', () => { SHOWCHAIN = !SHOWCHAIN; render(); });
   on('bMe',    () => setMe(CUR.id));
   on('bNotMe', () => setMe(null));
   on('bSpouse', () => { ADD = 'spouse'; EDIT = null; render();
@@ -537,6 +557,36 @@ function relation(me, them){
   if (theirMate) return gendered(them, 'בן הזוג של ', 'בת הזוג של ') + core.replace(/^ה/, '');
   if (myMate) return core + ' — דרך ' + gendered(myMate, 'בן הזוג', 'בת הזוג') + ' שלי';
   return core;
+}
+
+// The chain that makes the relationship: up from me to the ancestor we share, then back
+// down to them. Shown across the page so the whole connection is one line to read.
+function relChain(me, them){
+  const myMate = partnerOf(me), theirMate = partnerOf(them);
+  const a = myMate || me, b = theirMate || them;
+  const pa = pathOf(a), pb = pathOf(b);
+  let L = 0;
+  while (L < pa.length && L < pb.length && pa[L].id === pb[L].id) L++;
+  if (!L) return [];
+  const up = pa.slice(L - 1).reverse();      // me ... up to the shared ancestor
+  const down = pb.slice(L);                  // shared ancestor ... down to them
+  let chain = up.concat(down);
+  if (myMate) chain = [me].concat(chain);
+  if (theirMate) chain = chain.concat([them]);
+  const seen = new Set();
+  return chain.filter(x => !seen.has(x.id) && seen.add(x.id));
+}
+
+function chainHtml(me, them){
+  const chain = relChain(me, them);
+  if (chain.length < 2) return '';
+  const top = chain.reduce((best, x) => pathOf(partnerOf(x) || x).length
+                                      < pathOf(partnerOf(best) || best).length ? x : best, chain[0]);
+  return '<div class="chain">' + chain.map((x, i) =>
+      (i ? '<span class="arr">‹</span>' : '')
+      + '<span class="node' + (x.id === me.id ? ' me' : '') + (x.id === them.id ? ' them' : '')
+      + (x.id === top.id ? ' top' : '') + '" data-go="' + x.id + '">'
+      + esc(x.name) + (x.surname ? ' ' + esc(x.surname) : '') + '</span>').join('') + '</div>';
 }
 
 async function setMe(id){
