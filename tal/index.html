@@ -44,6 +44,9 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
 .kid .nm:hover{color:var(--accent);text-decoration:underline}
 .kid .ct{color:var(--dim);font-size:12.5px;white-space:nowrap}
 .kid .ord{display:flex;gap:4px}
+.sexpick{display:inline-flex;gap:6px;margin-top:4px}
+.sexpick .sx{border:1px solid var(--line);background:var(--bg);padding:8px 16px;font:inherit}
+.sexpick .sx.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
 .kid .grip{cursor:grab;color:#b9b9b4;font-size:19px;line-height:1;padding:6px 2px;
   touch-action:none;user-select:none;-webkit-user-select:none}
 .kid .grip:active{cursor:grabbing;color:var(--accent)}
@@ -157,6 +160,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, ADD = false;
+let PICKSEX = '';
 
 // A spouse is a person in their own right, attached through spouse_of rather than parent_id,
 // so they can carry their own surname, birth name and dates. Children still hang off the
@@ -211,6 +215,7 @@ function render(){
   h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">ז״ל</span>' : '') + '</div>';
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
+  if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
   if (p.note) bits.push(esc(p.note));
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
   if (owner){
@@ -234,6 +239,7 @@ function render(){
      + '</div>';
   h += '</div>';
 
+  PICKSEX = (EDIT ? (p.sex || '') : '');
   if (EDIT) h += form(p, false);
   if (ADD)  h += form({name:'', surname:p.surname||'', maiden:'', note:'', deceased:false}, true);
 
@@ -271,10 +277,18 @@ function form(p, isNew){
    + '<div><label>שם פרטי</label><input type="text" id="fName" value="' + v('name') + '"></div>'
    + '<div><label>שם משפחה</label><input type="text" id="fSur" value="' + v('surname') + '"></div>'
    + '<div><label>שם לידה / נעורים</label><input type="text" id="fMaid" value="' + v('maiden') + '"></div>'
+   + '<div><label>שנת / תאריך לידה</label><input type="text" id="fBorn" value="' + v('born') + '" placeholder="1950 או 25.1.1950"></div>'
+   + '<div><label>תאריך פטירה</label><input type="text" id="fDied" value="' + v('died') + '"></div>'
    + '<div><label>שם באנגלית</label><input type="text" id="fEn" value="' + v('name_en') + '"></div>'
    + '<div><label>הערה</label><input type="text" id="fNote" value="' + v('note') + '"></div>'
    + '</div>'
-   + '<label style="margin-top:12px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
+   + '<div style="margin-top:12px"><label>בן או בת</label>'
+   + '<span class="sexpick">'
+   + '<button type="button" class="sx' + (p.sex === 'M' ? ' on' : '') + '" data-sx="M">בן</button>'
+   + '<button type="button" class="sx' + (p.sex === 'F' ? ' on' : '') + '" data-sx="F">בת</button>'
+   + '<button type="button" class="sx' + (!p.sex ? ' on' : '') + '" data-sx="">לא ידוע</button>'
+   + '</span></div>'
+   + '<label style="margin-top:10px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
    + '<div class="btns"><button class="big" id="fSave">שמירה</button>'
    + '<button class="ghost" id="fCancel">ביטול</button></div>'
    + '<div id="formMsg"></div></div>';
@@ -294,6 +308,10 @@ function wire(){
     const f = $('fName'); if (f) f.focus(); });
   wireDrag();
   on('fCancel', () => { EDIT = null; ADD = false; render(); });
+  document.querySelectorAll('.sx').forEach(b => b.onclick = () => {
+    PICKSEX = b.dataset.sx;
+    document.querySelectorAll('.sx').forEach(x => x.classList.toggle('on', x === b));
+  });
   on('fSave', save);
 }
 
@@ -302,9 +320,11 @@ async function save(){
   const row = {
     name: $('fName').value.trim(), surname: $('fSur').value.trim(),
     maiden: $('fMaid').value.trim(), name_en: $('fEn').value.trim(),
+    born: $('fBorn').value.trim(), died: $('fDied').value.trim(), sex: PICKSEX,
     note: $('fNote').value.trim(), deceased: $('fDead').checked,
     updated_at: new Date().toISOString()
   };
+  const wasSurname = (ADD ? '' : (CUR.surname || '')).trim();
   if (!row.name){ $('formMsg').innerHTML = '<div class="note err">צריך שם פרטי.</div>'; return; }
   $('fSave').disabled = true;
   let err;
@@ -326,7 +346,34 @@ async function save(){
   }
   $('fSave').disabled = false;
   if (err){ $('formMsg').innerHTML = '<div class="note err">' + esc(err.message) + '</div>'; return; }
+  const changedSurname = !ADD && wasSurname && row.surname && row.surname !== wasSurname;
   EDIT = null; ADD = false; index(); counts(); render();
+  if (changedSurname) await cascade(CUR, wasSurname, row.surname);
+}
+
+// Changing a surname should not mean retyping it on every child and grandchild. Only
+// descendants still carrying the OLD name are offered - anyone who already has a married
+// name of their own is left alone.
+async function cascade(person, oldSur, newSur){
+  const hit = [];
+  (function walk(p){
+    kidsOf(p).forEach(c => {
+      if ((c.surname || '').trim() === oldSur) hit.push(c);
+      const m = SPOUSE.get(c.id);
+      if (m && (m.surname || '').trim() === oldSur && c.sex === 'M') hit.push(m);
+      walk(c);
+    });
+  })(person);
+  if (!hit.length) return;
+  const names = hit.slice(0, 6).map(x => x.name).join(', ') + (hit.length > 6 ? '...' : '');
+  if (!confirm('לשנות גם ל' + hit.length + ' צאצאים שעדיין רשומים כ' + oldSur + '?\n' + names)) return;
+  for (const c of hit){
+    const r = await sb.from('tal_people').update({surname: newSur, updated_at: new Date().toISOString()}).eq('id', c.id);
+    if (r.error){ alert(r.error.message); break; }
+    c.surname = newSur;
+  }
+  log(person.id, 'cascade', oldSur + ' -> ' + newSur + ' (' + hit.length + ')');
+  index(); render();
 }
 
 // Drag a child up or down the list to change birth order. The arrows do the same thing one
@@ -421,6 +468,8 @@ function renderWhole(){
     return '<li class="g' + depth + '">'
       + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
       + (p.deceased ? ' <span class="dead">ז״ל</span>' : '')
+      + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
+          + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
       + (m ? ' <span class="sp">· ' + esc(fullName(m))
              + (m.deceased ? ' ז״ל' : '') + '</span>' : '')
       + kidsHtml(p, depth + 1) + '</li>';
