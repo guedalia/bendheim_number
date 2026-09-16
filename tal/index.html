@@ -78,8 +78,9 @@ ul.full>li:before{display:none}
 ul.full .n{font-weight:600;cursor:pointer}
 ul.full .n:hover{color:var(--accent);text-decoration:underline}
 ul.full .sp{color:var(--dim);font-weight:400;font-size:14px}
-ul.full .g1>.n{font-size:19px}
-ul.full .g2>.n{font-size:17px}
+ul.full .amp{color:var(--dim);font-weight:400;padding:0 2px}
+ul.full .g1>.n,ul.full .g1>.amp{font-size:19px}
+ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 @media print{
   header .right,#pwCard,.card:has(#q),.btns,footer{display:none!important}
   body{font-size:11pt}
@@ -556,8 +557,11 @@ function renderWhole(){
       + (p.deceased ? ' <span class="dead">ז״ל</span>' : '')
       + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
           + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
-      + (m ? ' <span class="sp">· ' + esc(fullName(m))
-             + (m.deceased ? ' ז״ל' : '') + '</span>' : '')
+      + (m ? ' <span class="amp">+</span> '
+             + '<span class="n" data-go="' + m.id + '">' + esc(fullName(m)) + '</span>'
+             + (m.deceased ? ' <span class="dead">ז״ל</span>' : '')
+             + (m.born || m.died ? ' <span class="sp">(' + esc(m.born || '')
+                 + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '') : '')
       + kidsHtml(p, depth + 1) + '</li>';
   };
   const kidsHtml = (p, depth) => {
