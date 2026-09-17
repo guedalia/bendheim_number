@@ -61,6 +61,8 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
 .note.ok{border-inline-start-color:var(--good-line);background:var(--good)}
 .note.info{border-inline-start-color:var(--accent);background:var(--accent-soft)}
 .dead{font-size:12px;color:var(--dim)}
+a.tel{color:var(--accent);text-decoration:none;font-variant-numeric:tabular-nums}
+a.tel:hover{text-decoration:underline}
 .rel{margin-top:8px;display:inline-block;font-size:15px;font-weight:600;color:var(--accent);
   background:var(--accent-soft);padding:5px 12px;border-radius:6px}
 .rel.me{background:var(--good);color:#2f6b45}
@@ -254,6 +256,8 @@ function render(){
   if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
   if (p.note) bits.push(esc(p.note));
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
+  if (p.phone) h += '<div class="meta"><a class="tel" href="tel:'
+    + esc(p.phone.replace(/[^+\d]/g, '')) + '">' + esc(p.phone) + '</a></div>';
   if (owner){
     h += '<div class="meta">בן/בת הזוג של <button class="link" data-go="' + owner.id + '">'
        + esc(fullName(owner)) + '</button></div>';
@@ -326,6 +330,7 @@ function form(p, isNew){
    + '<div><label>שם פרטי</label><input type="text" id="fName" value="' + v('name') + '"></div>'
    + '<div><label>שם משפחה</label><input type="text" id="fSur" value="' + v('surname') + '"></div>'
    + '<div><label>שם לידה / נעורים</label><input type="text" id="fMaid" value="' + v('maiden') + '"></div>'
+   + '<div><label>טלפון</label><input type="text" id="fPhone" value="' + v('phone') + '" inputmode="tel" placeholder="לא חובה"></div>'
    + '<div><label>שנת / תאריך לידה</label><input type="text" id="fBorn" value="' + v('born') + '" placeholder="1950 או 25.1.1950"></div>'
    + '<div><label>תאריך פטירה</label><input type="text" id="fDied" value="' + v('died') + '"></div>'
    + '<div><label>שם באנגלית</label><input type="text" id="fEn" value="' + v('name_en') + '"></div>'
@@ -378,6 +383,7 @@ async function save(){
     name: $('fName').value.trim(), surname: $('fSur').value.trim(),
     maiden: $('fMaid').value.trim(), name_en: $('fEn').value.trim(),
     born: $('fBorn').value.trim(), died: $('fDied').value.trim(), sex: PICKSEX,
+    phone: $('fPhone').value.trim(),
     note: $('fNote').value.trim(), deceased: $('fDead').checked,
     relation: (ADD ? 'child' : (CUR.relation || 'child')),
     updated_at: new Date().toISOString()
@@ -749,7 +755,7 @@ function skel(s){
 }
 
 function hay(p){
-  return [p.name, p.surname, p.maiden, p.spouse, p.spouse_maiden, p.name_en, p.alt]
+  return [p.name, p.surname, p.maiden, p.spouse, p.spouse_maiden, p.name_en, p.alt, p.phone]
     .filter(Boolean).join(' ');
 }
 
