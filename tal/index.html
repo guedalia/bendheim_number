@@ -24,6 +24,12 @@ label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
 input[type=text],input[type=password],input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);
   border-radius:8px;font:inherit;background:var(--bg);color:var(--ink);font-size:17px}
 button{font:inherit;cursor:pointer;border-radius:8px}
+button:disabled{opacity:.65;cursor:default}
+.spin{display:inline-block;width:13px;height:13px;margin-inline-end:8px;vertical-align:-2px;
+  border:2px solid currentColor;border-top-color:transparent;border-radius:50%;
+  animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
 button.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:9px 14px}
 button.ghost:hover{background:var(--panel)}
 button.big{padding:12px 18px;font-weight:600;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent)}
@@ -148,15 +154,17 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 <main>
   <div id="login" class="card" style="display:none">
     <div class="who" style="font-size:19px;margin-bottom:12px">כניסה</div>
-    <div id="emailWrap" style="margin-bottom:12px">
-      <label for="em">כתובת מייל</label>
-      <input type="email" id="em" autocomplete="username" inputmode="email">
-    </div>
-    <label for="pw">סיסמה</label>
-    <input type="password" id="pw" autocomplete="current-password">
-    <div class="btns">
-      <button class="big" id="go">כניסה</button>
-    </div>
+    <form id="loginForm">
+      <div id="emailWrap" style="margin-bottom:12px">
+        <label for="em">שם משתמש</label>
+        <input type="text" id="em" autocomplete="username">
+      </div>
+      <label for="pw">סיסמה</label>
+      <input type="password" id="pw" autocomplete="current-password">
+      <div class="btns">
+        <button class="big" id="go" type="submit">כניסה</button>
+      </div>
+    </form>
     <div id="loginMsg"></div>
   </div>
 
@@ -191,6 +199,10 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 const SUPA_URL = 'https://ahomwnlimuxinttwrikr.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFob213bmxpbXV4aW50dHdyaWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjI5MTUsImV4cCI6MjA4OTIzODkxNX0.B5y9pilGpPM2xxkC30nZfJhUKOPFI8ELSZjbYF5HNeM';
 
+const LOGIN_DOMAIN = 'guedalia.com';   // "josh" signs in as josh@guedalia.com
+const asEmail = v => { v = (v || '').trim().toLowerCase();
+                       return v && !v.includes('@') ? v + '@' + LOGIN_DOMAIN : v; };
+
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
@@ -199,6 +211,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
 let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, ADD = false;
 let PICKSEX = '';
 let SHOWCHAIN = false;
+let IS_ADMIN = false;
 
 // A spouse is a person in their own right, attached through spouse_of rather than parent_id,
 // so they can carry their own surname, birth name and dates. Children still hang off the
@@ -858,6 +871,8 @@ function counts(){
 
 // ---------- boot ----------
 async function load(){
+  const adm = await sb.from('tal_admins').select('email').eq('email', window.__email || '');
+  IS_ADMIN = !adm.error && (adm.data || []).length > 0;
   const { data, error } = await sb.from('tal_people').select('*');
   if (error){ $('person').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
   PEOPLE = data; index(); counts();
@@ -867,7 +882,7 @@ async function load(){
   $('app').style.display = '';
   $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
     + ' <button class="ghost" id="treeBtn">כל העץ</button>'
-    + ' <button class="ghost" id="logBtn">יומן</button>'
+    + (IS_ADMIN ? ' <button class="ghost" id="logBtn">יומן</button>' : '')
     + ' <span class="sub">' + esc(window.__email || '') + '</span>'
     + ' <button class="ghost" id="pwBtn">סיסמה</button>'
     + ' <button class="ghost" id="out">יציאה</button>';
@@ -880,7 +895,7 @@ async function load(){
     };
   };
   window.__setMeBtn = setMeBtn; setMeBtn();
-  $('logBtn').onclick = () => {
+  if ($('logBtn')) $('logBtn').onclick = () => {
     if ($('logv').style.display === 'none'){ location.hash = '#log'; showLog(); }
     else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); render(); }
   };
@@ -899,8 +914,10 @@ async function load(){
     if (a.length < 8){ $('pwMsg').innerHTML = '<div class="note err">לפחות 8 תווים.</div>'; return; }
     if (a !== b){ $('pwMsg').innerHTML = '<div class="note err">שתי הסיסמאות לא זהות.</div>'; return; }
     $('pwSave').disabled = true;
+    $('pwSave').innerHTML = '<span class="spin"></span>שומר…';
     const { error } = await sb.auth.updateUser({ password: a });
     $('pwSave').disabled = false;
+    $('pwSave').textContent = 'שמירה';
     if (error){ $('pwMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
     $('pwMsg').innerHTML = '<div class="note ok">הסיסמה שונתה.</div>';
     $('pw1').value = ''; $('pw2').value = '';
@@ -908,26 +925,41 @@ async function load(){
   $('foot').textContent = 'כל שינוי נשמר מיד ונראה לכולם.';
   render();
   if (location.hash === '#tree') showWhole();
-  if (location.hash === '#log') showLog();
+  if (location.hash === '#log' && IS_ADMIN) showLog();
 }
 
 async function boot(){
   const { data: { session } } = await sb.auth.getSession();
   if (session){ window.__email = session.user.email; return load(); }
   $('login').style.display = '';
+  const busy = on => {
+    $('go').disabled = on;
+    $('em').disabled = on;
+    $('pw').disabled = on;
+    $('go').innerHTML = on ? '<span class="spin"></span>מתחבר…' : 'כניסה';
+  };
   const tryIn = async () => {
-    $('go').disabled = true;
+    if ($('go').disabled) return;
+    if (!$('em').value.trim() || !$('pw').value){
+      $('loginMsg').innerHTML = '<div class="note err">צריך מייל וסיסמה.</div>';
+      return;
+    }
+    busy(true);
     $('loginMsg').innerHTML = '';
     const { error } = await sb.auth.signInWithPassword({
-      email: $('em').value.trim(), password: $('pw').value });
-    $('go').disabled = false;
-    if (error){ $('loginMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
+      email: asEmail($('em').value), password: $('pw').value });
+    if (error){
+      busy(false);
+      $('loginMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>';
+      $('pw').select();
+      return;
+    }
     const { data: { session } } = await sb.auth.getSession();
     window.__email = session.user.email;
-    load();
+    load();                       // stays busy until the tree replaces the form
   };
-  $('go').onclick = tryIn;
-  $('pw').onkeydown = e => { if (e.key === 'Enter') tryIn(); };
+  // a real form, so Enter submits from either field and password managers behave
+  $('loginForm').onsubmit = e => { e.preventDefault(); tryIn(); };
   $('em').focus();
 }
 
@@ -935,7 +967,7 @@ $('q').oninput = search;
 addEventListener('hashchange', () => {
   if (!BYID.size) return;
   if (location.hash === '#tree'){ showWhole(); return; }
-  if (location.hash === '#log'){ showLog(); return; }
+  if (location.hash === '#log'){ if (IS_ADMIN) showLog(); return; }
   const h = location.hash.match(/^#p(\d+)$/);
   if (h){ CUR = BYID.get(+h[1]) || CUR; EDIT = null; ADD = false; showPerson(); render(); }
 });
