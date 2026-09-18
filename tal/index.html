@@ -58,7 +58,11 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
   touch-action:none;user-select:none;-webkit-user-select:none}
 .kid .grip:active{cursor:grabbing;color:var(--accent)}
 .kid.dragging{opacity:.45}
-.kid.over{background:var(--accent-soft);outline:2px dashed var(--accent);outline-offset:-2px}
+.kid.over-top,.kid.over-bottom{position:relative;background:var(--accent-soft)}
+.kid.over-top:after,.kid.over-bottom:after{content:"";position:absolute;inset-inline:0;
+  height:3px;background:var(--accent);border-radius:2px}
+.kid.over-top:after{top:-2px}
+.kid.over-bottom:after{bottom:-2px}
 .empty{color:var(--dim);font-size:14px;padding:10px 2px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .note{border-inline-start:3px solid var(--warn-line);background:var(--warn);padding:10px 13px;
@@ -472,20 +476,28 @@ function wireDrag(){
       el.classList.add('dragging');
       g.setPointerCapture(e.pointerId);
 
-      const moveTo = ev => {
+      // which half of the row the pointer is over decides where the line is drawn,
+      // and the drop lands exactly there
+      const aim = ev => {
         const t = document.elementFromPoint(ev.clientX, ev.clientY);
         const row = t && t.closest ? t.closest('.kid') : null;
-        document.querySelectorAll('.kid').forEach(k => k.classList.remove('over'));
-        if (row && +row.dataset.id !== DRAG) row.classList.add('over');
+        if (!row || +row.dataset.id === DRAG) return null;
+        const r = row.getBoundingClientRect();
+        return {row: row, id: +row.dataset.id, before: ev.clientY < r.top + r.height / 2};
+      };
+      const moveTo = ev => {
+        document.querySelectorAll('.kid').forEach(k =>
+          k.classList.remove('over', 'over-top', 'over-bottom'));
+        const a = aim(ev);
+        if (a) a.row.classList.add(a.before ? 'over-top' : 'over-bottom');
       };
       const done = ev => {
         g.onpointermove = null; g.onpointerup = null; g.onpointercancel = null;
-        const t = document.elementFromPoint(ev.clientX, ev.clientY);
-        const row = t && t.closest ? t.closest('.kid') : null;
-        const target = row && +row.dataset.id !== DRAG ? +row.dataset.id : null;
-        document.querySelectorAll('.kid').forEach(k => k.classList.remove('dragging', 'over'));
+        const a = aim(ev);
+        document.querySelectorAll('.kid').forEach(k =>
+          k.classList.remove('dragging', 'over', 'over-top', 'over-bottom'));
         const from = DRAG; DRAG = null;
-        if (target) reorder(from, target);
+        if (a) reorder(from, a.id, a.before);
       };
       g.onpointermove = moveTo;
       g.onpointerup = done;
@@ -494,12 +506,18 @@ function wireDrag(){
   });
 }
 
-async function reorder(dragId, dropId){
+// `before` says which side of the target row the pointer was on, so the item lands exactly
+// where the line was drawn. Removing first and then indexing by the target's ORIGINAL
+// position shifts everything by one when dragging downwards, which is why this used to
+// need several attempts to land.
+async function reorder(dragId, dropId, before){
   const sibs = kidsOf(BYID.get(BYID.get(dragId).parent_id)).slice();
   const from = sibs.findIndex(s => s.id === dragId);
-  const to   = sibs.findIndex(s => s.id === dropId);
-  if (from < 0 || to < 0) return;
-  sibs.splice(to, 0, sibs.splice(from, 1)[0]);
+  if (from < 0 || !sibs.some(s => s.id === dropId)) return;
+  const item = sibs.splice(from, 1)[0];
+  let idx = sibs.findIndex(s => s.id === dropId);
+  if (!before) idx += 1;
+  sibs.splice(idx, 0, item);
   const changed = sibs.filter((s, i) => s.sort_order !== i + 1);
   for (let i = 0; i < sibs.length; i++) sibs[i].sort_order = i + 1;
   for (const s of changed){
