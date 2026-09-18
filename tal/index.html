@@ -21,7 +21,7 @@ main{padding:20px;max-width:760px;margin:0 auto}
 body.wide main{max-width:none}
 .card{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
 label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
-input[type=text],input[type=password]{width:100%;padding:10px 12px;border:1px solid var(--line);
+input[type=text],input[type=password],input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);
   border-radius:8px;font:inherit;background:var(--bg);color:var(--ink);font-size:17px}
 button{font:inherit;cursor:pointer;border-radius:8px}
 button.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:9px 14px}
@@ -148,13 +148,12 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 <main>
   <div id="login" class="card" style="display:none">
     <div class="who" style="font-size:19px;margin-bottom:12px">כניסה</div>
+    <div id="emailWrap" style="margin-bottom:12px">
+      <label for="em">כתובת מייל</label>
+      <input type="email" id="em" autocomplete="username" inputmode="email">
+    </div>
     <label for="pw">סיסמה</label>
     <input type="password" id="pw" autocomplete="current-password">
-    <div class="note info">לכל אחד כדאי מייל משלו — כך היומן מראה מי שינה מה.</div>
-    <div id="emailWrap" style="margin-bottom:10px">
-      <label for="em">כתובת מייל</label>
-      <input type="text" id="em" autocomplete="username">
-    </div>
     <div class="btns">
       <button class="big" id="go">כניסה</button>
     </div>
@@ -191,7 +190,6 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 <script>
 const SUPA_URL = 'https://ahomwnlimuxinttwrikr.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFob213bmxpbXV4aW50dHdyaWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjI5MTUsImV4cCI6MjA4OTIzODkxNX0.B5y9pilGpPM2xxkC30nZfJhUKOPFI8ELSZjbYF5HNeM';
-const LOGIN_EMAIL = 'tree@guedalia.com';
 
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const $ = id => document.getElementById(id);
@@ -917,7 +915,6 @@ async function boot(){
   const { data: { session } } = await sb.auth.getSession();
   if (session){ window.__email = session.user.email; return load(); }
   $('login').style.display = '';
-  $('em').value = LOGIN_EMAIL;
   const tryIn = async () => {
     $('go').disabled = true;
     $('loginMsg').innerHTML = '';
@@ -931,7 +928,7 @@ async function boot(){
   };
   $('go').onclick = tryIn;
   $('pw').onkeydown = e => { if (e.key === 'Enter') tryIn(); };
-  $('pw').focus();
+  $('em').focus();
 }
 
 $('q').oninput = search;
