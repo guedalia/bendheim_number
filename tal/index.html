@@ -534,6 +534,20 @@ async function del(){
   CUR = BYID.get(up); index(); counts(); render();
 }
 
+// Supabase keeps only the LAST sign-in per account, so record each one here as well,
+// plus one row when a returning session opens the app - once per browser session, not
+// per page load, or a refresh would look like a visit.
+function noteVisit(kind){
+  try {
+    if (kind === 'open' && sessionStorage.getItem('tal_seen')) return;
+    if (kind === 'open') sessionStorage.setItem('tal_seen', '1');
+  } catch (e) {}
+  sb.from('tal_visits').insert({
+    who: window.__email || '', kind: kind,
+    device: innerWidth < 768 ? 'mobile' : 'desktop'
+  }).then(() => {}, () => {});
+}
+
 function log(pid, action, detail){
   sb.from('tal_log').insert({person_id: pid, action: action, detail: detail,
     who: window.__email || ''}).then(() => {}, () => {});
@@ -708,10 +722,30 @@ async function renderLog(){
                        : esc(r.detail || '—')) + '</td>'
          + '<td class="who-cell">' + esc(r.who || '—') + '</td></tr>';
   }).join('');
+  const vis = await sb.from('tal_visits').select('*').order('id', {ascending: false}).limit(200);
+  let visHtml = '';
+  if (!vis.error && vis.data.length){
+    const per = {};
+    vis.data.forEach(v => {
+      const k = v.who || '—';
+      per[k] = per[k] || {n: 0, last: v.at, dev: {}};
+      per[k].n++;
+      per[k].dev[v.device || '?'] = (per[k].dev[v.device || '?'] || 0) + 1;
+    });
+    visHtml = '<h3>כניסות</h3><table class="logt"><thead><tr><th>מי</th><th>כניסות</th>'
+      + '<th>מכשיר</th><th>אחרונה</th></tr></thead><tbody>'
+      + Object.entries(per).sort((a, b) => b[1].n - a[1].n).map(([w, d]) =>
+          '<tr><td>' + esc(w) + '</td><td>' + d.n + '</td><td class="who-cell">'
+          + esc(Object.entries(d.dev).map(([k, n]) => (k === 'mobile' ? 'נייד' : 'מחשב') + ' ' + n).join(' · '))
+          + '</td><td class="who-cell">' + esc(when(d.last)) + '</td></tr>').join('')
+      + '</tbody></table>';
+  }
   $('logv').innerHTML =
-      '<div class="card"><div class="who" style="font-size:19px">יומן שינויים</div>'
+      '<div class="card"><div class="who" style="font-size:19px">יומן</div>'
     + '<div class="meta">' + data.length + ' שינויים אחרונים · '
     + Object.entries(by).map(([w, n]) => esc(w) + ' (' + n + ')').join(' · ') + '</div></div>'
+    + visHtml
+    + '<h3>שינויים</h3>'
     + '<table class="logt"><thead><tr><th>מתי</th><th>מה</th><th>מי בעץ</th><th>מי שינה</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table>';
   $('logv').querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
@@ -930,7 +964,7 @@ async function load(){
 
 async function boot(){
   const { data: { session } } = await sb.auth.getSession();
-  if (session){ window.__email = session.user.email; return load(); }
+  if (session){ window.__email = session.user.email; noteVisit('open'); return load(); }
   $('login').style.display = '';
   const busy = on => {
     $('go').disabled = on;
@@ -956,6 +990,7 @@ async function boot(){
     }
     const { data: { session } } = await sb.auth.getSession();
     window.__email = session.user.email;
+    noteVisit('login');
     load();                       // stays busy until the tree replaces the form
   };
   // a real form, so Enter submits from either field and password managers behave
