@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>The Prins Family Tree</title>
+<style>
+:root{
+  --bg:#ffffff; --panel:#f7f7f5; --line:#e3e3df; --ink:#1c1c1a; --dim:#6b6b66;
+  --accent:#2f5d8c; --accent-soft:#eaf1f8; --good:#dff3e4; --good-line:#8dc79f;
+  --warn:#fdf1d8; --warn-line:#e0bd6a; --bad:#fbe4e4; --bad-line:#d99a9a;
+}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+header .sub{color:var(--dim);font-size:13px}
+header .right{margin-inline-start:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+main{padding:20px;max-width:760px;margin:0 auto}
+body.wide main{max-width:none}
+.card{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
+input[type=text],input[type=password],input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);
+  border-radius:8px;font:inherit;background:var(--bg);color:var(--ink);font-size:17px}
+button{font:inherit;cursor:pointer;border-radius:8px}
+button:disabled{opacity:.65;cursor:default}
+.spin{display:inline-block;width:13px;height:13px;margin-inline-end:8px;vertical-align:-2px;
+  border:2px solid currentColor;border-top-color:transparent;border-radius:50%;
+  animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
+button.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:9px 14px}
+button.ghost:hover{background:var(--panel)}
+button.big{padding:12px 18px;font-weight:600;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent)}
+button.big:hover{background:var(--accent);color:#fff}
+button.danger{border:1px solid var(--bad-line);background:var(--bad);color:#8c2f2f;padding:9px 14px}
+button.tiny{border:1px solid var(--line);background:var(--bg);padding:3px 9px;font-size:15px;line-height:1.1}
+button.tiny:hover{background:var(--accent-soft)}
+button.link{background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0 3px}
+.btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.who{font-size:24px;font-weight:700;line-height:1.25}
+.meta{color:var(--dim);font-size:14px;margin-top:3px}
+.crumb{font-size:13px;color:var(--dim);margin-bottom:10px;word-break:break-word}
+.crumb button{font-size:13px}
+h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spacing:.04em}
+.kids{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.kid{padding:10px 13px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.kid:last-child{border-bottom:0}
+.kid .nm{font-weight:600;cursor:pointer;flex:1;min-width:0}
+.kid .nm:hover{color:var(--accent);text-decoration:underline}
+.kid .ct{color:var(--dim);font-size:12.5px;white-space:nowrap}
+.kid .ord{display:flex;gap:4px}
+.sexpick{display:inline-flex;gap:6px;margin-top:4px}
+.sexpick .sx{border:1px solid var(--line);background:var(--bg);padding:8px 16px;font:inherit}
+.sexpick .sx.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.kid .grip{cursor:grab;color:#b9b9b4;font-size:19px;line-height:1;padding:6px 2px;
+  touch-action:none;user-select:none;-webkit-user-select:none}
+.kid .grip:active{cursor:grabbing;color:var(--accent)}
+.kid.dragging{opacity:.45}
+.kid.over-top,.kid.over-bottom{position:relative;background:var(--accent-soft)}
+.kid.over-top:after,.kid.over-bottom:after{content:"";position:absolute;inset-inline:0;
+  height:3px;background:var(--accent);border-radius:2px}
+.kid.over-top:after{top:-2px}
+.kid.over-bottom:after{bottom:-2px}
+.empty{color:var(--dim);font-size:14px;padding:10px 2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.note{border-inline-start:3px solid var(--warn-line);background:var(--warn);padding:10px 13px;
+  border-radius:0 8px 8px 0;font-size:13.5px;margin:10px 0}
+.note.err{border-inline-start-color:var(--bad-line);background:var(--bad)}
+.note.ok{border-inline-start-color:var(--good-line);background:var(--good)}
+.note.info{border-inline-start-color:var(--accent);background:var(--accent-soft)}
+.dead{font-size:12px;color:var(--dim)}
+a.tel{color:var(--accent);text-decoration:none;font-variant-numeric:tabular-nums}
+a.tel:hover{text-decoration:underline}
+.rel{margin-top:8px;display:inline-block;font-size:15px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);padding:5px 12px;border-radius:6px}
+.rel.me{background:var(--good);color:#2f6b45}
+.rel.none{background:var(--panel);color:var(--dim);font-weight:400;font-size:13.5px}
+.chainBtn{border:0;background:rgba(0,0,0,.06);color:inherit;font:inherit;font-size:12.5px;
+  padding:2px 9px;margin-inline-start:6px;border-radius:5px;cursor:pointer}
+.chainBtn:hover{background:rgba(0,0,0,.12)}
+.reltree{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel);overflow:auto}
+.reltree svg{display:block;margin:0 auto}
+.reltree .rln{stroke:#c2c2bd;stroke-width:1.5;fill:none}
+.reltree .rbx rect{fill:#fff;stroke:var(--line);stroke-width:1.5}
+.reltree .rbx{cursor:pointer}
+.reltree .rbx:hover rect{stroke:var(--accent);stroke-width:2}
+.reltree .rbx text{font:600 14px system-ui,sans-serif;fill:var(--ink);text-anchor:middle}
+.reltree .rbx text.s{font:400 12px system-ui,sans-serif;fill:var(--dim)}
+.reltree .rbx.anc rect{stroke-dasharray:5 3;stroke-width:2}
+.reltree .rbx.me rect{fill:var(--good);stroke:var(--good-line);stroke-width:2}
+.reltree .rbx.them rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.canvas{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+  padding:10px;max-height:78vh}
+.canvas svg{display:block}
+.canvas .ln{stroke:#c9c9c4;stroke-width:1.5;fill:none}
+.canvas .bx rect{fill:#fff;stroke:var(--line);stroke-width:1.5}
+.canvas .bx{cursor:pointer}
+.canvas .bx:hover rect{stroke:var(--accent);stroke-width:2}
+.canvas .bx.cur rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.canvas .bx.me rect{fill:var(--good);stroke:var(--good-line);stroke-width:2}
+.canvas .t1{font:600 14px system-ui,sans-serif;fill:var(--ink);text-anchor:middle}
+.canvas .t2{font:400 12px system-ui,sans-serif;fill:var(--dim);text-anchor:middle}
+.hits{border:1px solid var(--line);border-radius:8px;margin-top:8px;overflow:hidden;max-height:300px;overflow-y:auto}
+.hit{padding:9px 13px;border-bottom:1px solid var(--line);cursor:pointer}
+.hit:last-child{border-bottom:0}
+.hit:hover{background:var(--accent-soft)}
+.hit .p{color:var(--dim);font-size:12px}
+table.logt{border-collapse:collapse;width:100%;font-size:14px}
+table.logt th,table.logt td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:start}
+table.logt th{color:var(--dim);font-weight:600;font-size:12.5px}
+table.logt .who-cell{color:var(--dim);font-size:13px;word-break:break-all}
+footer{margin:30px 0 10px;color:var(--dim);font-size:12.5px;text-align:center}
+#whole,#logv{overflow-x:auto}
+ul.full,ul.full ul{list-style:none;margin:0;padding-inline-start:16px}
+ul.full li{position:relative;padding:3px 10px 3px 0;border-inline-start:1px solid var(--line)}
+ul.full li:before{content:"";position:absolute;inset-inline-start:0;top:15px;width:9px;height:1px;background:var(--line)}
+ul.full>li{border-inline-start:0}
+ul.full>li:before{display:none}
+ul.full .n{font-weight:600;cursor:pointer}
+ul.full .n:hover{color:var(--accent);text-decoration:underline}
+ul.full .sp{color:var(--dim);font-weight:400;font-size:14px}
+ul.full .amp{color:var(--dim);font-weight:400;padding:0 2px}
+ul.full .g1>.n,ul.full .g1>.amp{font-size:19px}
+ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
+@media print{
+  header .right,#pwCard,.card:has(#q),.btns,footer{display:none!important}
+  body{font-size:11pt}
+  ul.full li{padding:1px 8px 1px 0}
+}
+@media (max-width:430px){
+  main{padding:13px}
+  header{padding:12px 14px;gap:8px}
+  header h1{font-size:17px}
+  /* the six header buttons are wider than a phone, so give them their own full-width
+     rows instead of one line that pushes the whole page sideways */
+  header .right{margin-inline-start:0;width:100%;gap:6px}
+  header .right button.ghost{padding:7px 10px;font-size:13.5px}
+  header .right .sub{order:1;font-size:11.5px;overflow-wrap:anywhere}
+  ul.full,ul.full ul{padding-inline-start:11px}
+  .card{padding:14px}
+  .who{font-size:21px}
+  .grid{grid-template-columns:1fr}
+  .btns button{flex:1 1 100%}
+  .kid{flex-wrap:wrap;gap:8px}
+  .kid .nm{flex:1 1 60%}
+  .kid .ct{width:100%;text-align:start}
+  .kid .grip{font-size:22px;padding:8px 4px}
+  button.tiny{padding:6px 12px;font-size:17px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>The Prins Family Tree</h1>
+    <div class="sub" id="counts"></div>
+  </div>
+  <div class="right" id="whoami"></div>
+</header>
+
+<main>
+  <div id="login" class="card" style="display:none">
+    <div class="who" style="font-size:19px;margin-bottom:12px">Sign in</div>
+    <form id="loginForm">
+      <div id="emailWrap" style="margin-bottom:12px">
+        <label for="em">Username</label>
+        <input type="text" id="em" autocomplete="username">
+      </div>
+      <label for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="current-password">
+      <div class="btns">
+        <button class="big" id="go" type="submit">Sign in</button>
+      </div>
+    </form>
+    <div id="loginMsg"></div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="card" id="pwCard" style="display:none;border-color:var(--accent)">
+      <div class="who" style="font-size:17px;margin-bottom:10px">Change password</div>
+      <label for="pw1">New password (at least 8 characters)</label>
+      <input type="password" id="pw1" autocomplete="new-password">
+      <label for="pw2" style="margin-top:10px">Again, to confirm</label>
+      <input type="password" id="pw2" autocomplete="new-password">
+      <div class="btns">
+        <button class="big" id="pwSave">Save</button>
+        <button class="ghost" id="pwCancel">Cancel</button>
+      </div>
+      <div id="pwMsg"></div>
+      <div class="note info">The password is shared by everyone. After changing it you have to give it out again to everyone who edits.</div>
+    </div>
+    <div class="card">
+      <label for="q">Search</label>
+      <input type="text" id="q" placeholder="name...">
+      <div id="hits"></div>
+    </div>
+    <div id="person"></div>
+    <div id="whole" style="display:none"></div>
+    <div id="logv" style="display:none"></div>
+  </div>
+
+  <footer id="foot"></footer>
+</main>
+
+<script>
+const SUPA_URL = 'https://ahomwnlimuxinttwrikr.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFob213bmxpbXV4aW50dHdyaWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjI5MTUsImV4cCI6MjA4OTIzODkxNX0.B5y9pilGpPM2xxkC30nZfJhUKOPFI8ELSZjbYF5HNeM';
+
+const LOGIN_DOMAIN = 'guedalia.com';   // "josh" signs in as josh@guedalia.com
+const asEmail = v => { v = (v || '').trim().toLowerCase();
+                       return v && !v.includes('@') ? v + '@' + LOGIN_DOMAIN : v; };
+
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, ADD = false;
+let PICKSEX = '';
+let SHOWCHAIN = false;
+let IS_ADMIN = false;
+
+// A spouse is a person in their own right, attached through spouse_of rather than parent_id,
+// so they can carry their own surname, birth name and dates. Children still hang off the
+// family member, so a spouse never appears in the list of children.
+let SPOUSE = new Map();
+
+function index(){
+  BYID = new Map(); KIDS = new Map(); SPOUSE = new Map();
+  PEOPLE.forEach(p => BYID.set(p.id, p));
+  PEOPLE.forEach(p => {
+    if (p.spouse_of != null){ SPOUSE.set(p.spouse_of, p); return; }
+    const k = p.parent_id == null ? 'root' : p.parent_id;
+    if (!KIDS.has(k)) KIDS.set(k, []);
+    KIDS.get(k).push(p);
+  });
+  KIDS.forEach(a => a.sort((x, y) => (x.sort_order - y.sort_order) || x.id - y.id));
+}
+const kidsOf = p => KIDS.get(p == null ? 'root' : p.id) || [];
+const spouseOf = p => (p && p.spouse_of == null) ? SPOUSE.get(p.id) : null;
+const partnerOf = p => (p && p.spouse_of != null) ? BYID.get(p.spouse_of) : null;
+const root = () => (KIDS.get('root') || [])[0];
+
+function fullName(p){
+  let n = p.name || '';
+  if (p.surname) n += ' ' + p.surname;
+  // "לבית" is née, so it only fits a woman. A man who changed surname - Tzvi, born
+  // Richter, who took Tal - still needs his birth name shown, just not called that.
+  if (p.maiden) n += p.sex === 'F' ? ' (née ' + p.maiden + ')'
+                                   : ' (born ' + p.maiden + ')';
+  return n.trim();
+}
+function pathOf(p){
+  const out = [];
+  let c = p;
+  while (c){ out.unshift(c); c = c.parent_id == null ? null : BYID.get(c.parent_id); }
+  return out;
+}
+function descCount(p){
+  let n = 0;
+  (function walk(x){ kidsOf(x).forEach(k => { n++; walk(k); }); })(p);
+  return n;
+}
+
+// ---------- rendering ----------
+function render(){
+  if (!CUR) CUR = root();
+  if (!CUR){ $('person').innerHTML = '<div class="note err">No data.</div>'; return; }
+  const p = CUR, mate = spouseOf(p), owner = partnerOf(p);
+  const kids = kidsOf(owner || p), path = pathOf(owner || p);
+  const crumb = path.slice(0, -1).map(a =>
+      '<button class="link" data-go="' + a.id + '">' + esc(a.name) + '</button>').join(' ‹ ');
+
+  let h = '<div class="card">';
+  if (crumb) h += '<div class="crumb">' + crumb + ' ‹</div>';
+  h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">z"l</span>' : '') + '</div>';
+  const bits = [];
+  if (p.name_en) bits.push(esc(p.name_en));
+  if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
+  if (p.note) bits.push(esc(p.note));
+  if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
+  if (p.phone) h += '<div class="meta"><a class="tel" href="tel:'
+    + esc(p.phone.replace(/[^+\d]/g, '')) + '">' + esc(p.phone) + '</a></div>';
+  if (owner){
+    h += '<div class="meta">spouse of <button class="link" data-go="' + owner.id + '">'
+       + esc(fullName(owner)) + '</button></div>';
+  } else if (mate){
+    h += '<div class="meta">married to <button class="link" data-go="' + mate.id + '">'
+       + esc(fullName(mate)) + '</button>' + (mate.deceased ? ' <span class="dead">z"l</span>' : '')
+       + '</div>';
+  }
+  if (!owner){
+    const dc = descCount(p);
+    h += '<div class="meta">' + (kids.length ? kids.length + ' children' : 'no children recorded')
+       + (dc > kids.length ? ' · ' + dc + ' descendants in all' : '') + '</div>';
+  }
+  if (ME && BYID.get(ME)){
+    const meP = BYID.get(ME), rel = relation(meP, p);
+    if (rel){
+      const chain = relChain(meP, p);
+      h += '<div class="rel' + (ME === p.id ? ' me' : '') + '">' + esc(rel)
+         + (chain.length > 1 ? ' <button class="chainBtn" id="bChain">'
+              + (SHOWCHAIN ? 'hide' : 'how?') + '</button>' : '') + '</div>';
+      if (SHOWCHAIN) h += chainHtml(meP, p);
+    } else h += '<div class="rel none">no direct blood relation</div>';
+  }
+  h += '<div class="btns">'
+     + (!ME ? '<button class="ghost" id="bMe">that's me</button>'
+            : ME === p.id ? '<button class="ghost" id="bNotMe">that's not me</button>' : '')
+     + (owner ? '' : '<button class="big" id="bAdd">+ Add child</button>')
+     + (owner || mate ? '' : '<button class="big" id="bSpouse">+ Add spouse</button>')
+     + '<button class="ghost" id="bEdit">Edit</button>'
+     + ((owner || (p.parent_id != null && kids.length === 0)) ? '<button class="danger" id="bDel">Delete</button>' : '')
+     + '</div>';
+  h += '</div>';
+
+  PICKSEX = (EDIT ? (p.sex || '') : '');
+  if (EDIT) h += form(p, false);
+  if (ADD)  h += form({name:'', surname:p.surname||'', maiden:'', note:'', deceased:false}, true);
+
+  if (owner) { $('person').innerHTML = h; wire(); return; }
+
+  h += '<h3>Children</h3>';
+  if (!kids.length){
+    h += '<div class="empty">No children recorded. You can add some.</div>';
+  } else {
+    h += '<div class="kids">';
+    kids.forEach((k, i) => {
+      const n = kidsOf(k).length;
+      h += '<div class="kid" data-id="' + k.id + '">'
+         + '<span class="grip" title="drag to reorder">⠿</span>'
+         + '<span class="ord">'
+         + '<button class="tiny" data-mv="' + k.id + '" data-d="-1"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+         + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
+         + '</span>'
+         + '<span class="nm" data-go="' + k.id + '">' + esc(fullName(k))
+         + (k.deceased ? ' <span class="dead">z"l</span>' : '')
+ + '</span>'
+         + '<span class="ct">' + (n ? n + ' children' : '') + '</span>'
+         + '</div>';
+    });
+    h += '</div>';
+  }
+  $('person').innerHTML = h;
+  wire();
+}
+
+function form(p, isNew){
+  const v = (x) => esc(p[x] || '');
+  return '<div class="card" style="border-color:var(--accent)">'
+   + '<div class="who" style="font-size:17px;margin-bottom:12px">' + (isNew === 'spouse' ? 'New spouse' : isNew ? 'New child' : 'Edit') + '</div>'
+   + '<div class="grid">'
+   + '<div><label>First name</label><input type="text" id="fName" value="' + v('name') + '"></div>'
+   + '<div><label>Surname</label><input type="text" id="fSur" value="' + v('surname') + '"></div>'
+   + '<div><label>Maiden / birth name</label><input type="text" id="fMaid" value="' + v('maiden') + '"></div>'
+   + '<div><label>Phone</label><input type="text" id="fPhone" value="' + v('phone') + '" inputmode="tel"></div>'
+   + '<div><label>Year / date of birth</label><input type="text" id="fBorn" value="' + v('born') + '" placeholder="1950 or 25.1.1950"></div>'
+   + '<div><label>Date of death</label><input type="text" id="fDied" value="' + v('died') + '"></div>'
+   + '<div><label>Hebrew name</label><input type="text" id="fEn" value="' + v('name_en') + '"></div>'
+   + '<div><label>Note</label><input type="text" id="fNote" value="' + v('note') + '"></div>'
+   + '</div>'
+   + '<div style="margin-top:12px"><label>Male or female</label>'
+   + '<span class="sexpick">'
+   + '<button type="button" class="sx' + (p.sex === 'M' ? ' on' : '') + '" data-sx="M">Male</button>'
+   + '<button type="button" class="sx' + (p.sex === 'F' ? ' on' : '') + '" data-sx="F">Female</button>'
+   + '</span></div>'
+   + '<label style="margin-top:4px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> deceased</label>'
+   + '<div class="btns"><button class="big" id="fSave">Save</button>'
+   + '<button class="ghost" id="fCancel">Cancel</button></div>'
+   + '<div id="formMsg"></div></div>';
+}
+
+function wire(){
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+    CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false;
+    location.hash = '#p' + CUR.id; render();
+  });
+  document.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => move(+b.dataset.mv, +b.dataset.d));
+  const on = (id, fn) => { const e = $(id); if (e) e.onclick = fn; };
+  on('bAdd',  () => { ADD = true;  EDIT = null; render(); });
+  on('bEdit', () => { EDIT = true; ADD = false; render(); });
+  on('bDel',  del);
+  on('bChain', () => { SHOWCHAIN = !SHOWCHAIN; render(); });
+  on('bMe',    () => setMe(CUR.id));
+  on('bNotMe', () => setMe(null));
+  on('bSpouse', () => { ADD = 'spouse'; EDIT = null; render();
+    const f = $('fName'); if (f) f.focus(); });
+  wireDrag();
+  on('fCancel', () => { EDIT = null; ADD = false; render(); });
+  // two choices only; clicking the one already chosen clears it back to not set
+  document.querySelectorAll('.reltree [data-go]').forEach(b => b.onclick = () => {
+    CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false;
+    location.hash = '#p' + CUR.id; render();
+  });
+  document.querySelectorAll('.sx').forEach(b => b.onclick = () => {
+    PICKSEX = (PICKSEX === b.dataset.sx) ? '' : b.dataset.sx;
+    document.querySelectorAll('.sx').forEach(x =>
+      x.classList.toggle('on', PICKSEX !== '' && x.dataset.sx === PICKSEX));
+  });
+  on('fSave', save);
+}
+
+// ---------- writes ----------
+async function save(){
+  const row = {
+    name: $('fName').value.trim(), surname: $('fSur').value.trim(),
+    maiden: $('fMaid').value.trim(), name_en: $('fEn').value.trim(),
+    born: $('fBorn').value.trim(), died: $('fDied').value.trim(), sex: PICKSEX,
+    phone: $('fPhone').value.trim(),
+    note: $('fNote').value.trim(), deceased: $('fDead').checked,
+    relation: (ADD ? 'child' : (CUR.relation || 'child')),
+    updated_at: new Date().toISOString()
+  };
+  const wasSurname = (ADD ? '' : (CUR.surname || '')).trim();
+  if (!row.name){ $('formMsg').innerHTML = '<div class="note err">A first name is required.</div>'; return; }
+  $('fSave').disabled = true;
+  let err;
+  if (ADD === 'spouse'){
+    row.spouse_of = CUR.id;
+    const r = await sb.from('prins_people').insert(row).select();
+    err = r.error;
+    if (!err){ PEOPLE.push(r.data[0]); log(r.data[0].id, 'add spouse', row.name); }
+  } else if (ADD){
+    const sibs = kidsOf(CUR);
+    row.parent_id = CUR.id;
+    row.sort_order = sibs.length ? sibs[sibs.length - 1].sort_order + 1 : 1;
+    const r = await sb.from('prins_people').insert(row).select();
+    err = r.error; if (!err) { PEOPLE.push(r.data[0]); log(r.data[0].id, 'add', row.name); }
+  } else {
+    const r = await sb.from('prins_people').update(row).eq('id', CUR.id).select();
+    err = r.error;
+    if (!err){ Object.assign(BYID.get(CUR.id), r.data[0]); log(CUR.id, 'edit', row.name); }
+  }
+  $('fSave').disabled = false;
+  if (err){ $('formMsg').innerHTML = '<div class="note err">' + esc(err.message) + '</div>'; return; }
+  const changedSurname = !ADD && wasSurname && row.surname && row.surname !== wasSurname;
+  EDIT = null; ADD = false; index(); counts(); render();
+  if (changedSurname) await cascade(CUR, wasSurname, row.surname);
+}
+
+// Changing a surname should not mean retyping it on every child and grandchild. Only
+// descendants still carrying the OLD name are offered - anyone who already has a married
+// name of their own is left alone.
+async function cascade(person, oldSur, newSur){
+  const hit = [];
+  (function walk(p){
+    kidsOf(p).forEach(c => {
+      if (c.relation !== 'step' && (c.surname || '').trim() === oldSur) hit.push(c);
+      const m = SPOUSE.get(c.id);
+      if (m && (m.surname || '').trim() === oldSur && c.sex === 'M') hit.push(m);
+      if (c.relation !== 'step') walk(c);
+    });
+  })(person);
+  if (!hit.length) return;
+  const names = hit.slice(0, 6).map(x => x.name).join(', ') + (hit.length > 6 ? '...' : '');
+  if (!confirm('Also change the ' + hit.length + '  descendants still recorded as ' + oldSur + '?\n' + names)) return;
+  for (const c of hit){
+    const r = await sb.from('prins_people').update({surname: newSur, updated_at: new Date().toISOString()}).eq('id', c.id);
+    if (r.error){ alert(r.error.message); break; }
+    c.surname = newSur;
+  }
+  log(person.id, 'cascade', oldSur + ' -> ' + newSur + ' (' + hit.length + ')');
+  index(); render();
+}
+
+// Drag a child up or down the list to change birth order. The arrows do the same thing one
+// step at a time; dragging is quicker when a family has ten children and one is in the wrong
+// half of the list.
+// Pointer events rather than HTML5 drag-and-drop: those never fire on a touch screen, and
+// half the family will be doing this on a phone. Dragging starts from the grip only, so a
+// swipe anywhere else still scrolls the page.
+let DRAG = null;
+function wireDrag(){
+  document.querySelectorAll('.kid .grip').forEach(g => {
+    g.onpointerdown = e => {
+      e.preventDefault();
+      const el = g.closest('.kid');
+      DRAG = +el.dataset.id;
+      el.classList.add('dragging');
+      g.setPointerCapture(e.pointerId);
+
+      // which half of the row the pointer is over decides where the line is drawn,
+      // and the drop lands exactly there
+      const aim = ev => {
+        const t = document.elementFromPoint(ev.clientX, ev.clientY);
+        const row = t && t.closest ? t.closest('.kid') : null;
+        if (!row || +row.dataset.id === DRAG) return null;
+        const r = row.getBoundingClientRect();
+        return {row: row, id: +row.dataset.id, before: ev.clientY < r.top + r.height / 2};
+      };
+      const moveTo = ev => {
+        document.querySelectorAll('.kid').forEach(k =>
+          k.classList.remove('over', 'over-top', 'over-bottom'));
+        const a = aim(ev);
+        if (a) a.row.classList.add(a.before ? 'over-top' : 'over-bottom');
+      };
+      const done = ev => {
+        g.onpointermove = null; g.onpointerup = null; g.onpointercancel = null;
+        const a = aim(ev);
+        document.querySelectorAll('.kid').forEach(k =>
+          k.classList.remove('dragging', 'over', 'over-top', 'over-bottom'));
+        const from = DRAG; DRAG = null;
+        if (a) reorder(from, a.id, a.before);
+      };
+      g.onpointermove = moveTo;
+      g.onpointerup = done;
+      g.onpointercancel = done;
+    };
+  });
+}
+
+// `before` says which side of the target row the pointer was on, so the item lands exactly
+// where the line was drawn. Removing first and then indexing by the target's ORIGINAL
+// position shifts everything by one when dragging downwards, which is why this used to
+// need several attempts to land.
+async function reorder(dragId, dropId, before){
+  const sibs = kidsOf(BYID.get(BYID.get(dragId).parent_id)).slice();
+  const from = sibs.findIndex(s => s.id === dragId);
+  if (from < 0 || !sibs.some(s => s.id === dropId)) return;
+  const item = sibs.splice(from, 1)[0];
+  let idx = sibs.findIndex(s => s.id === dropId);
+  if (!before) idx += 1;
+  sibs.splice(idx, 0, item);
+  const changed = sibs.filter((s, i) => s.sort_order !== i + 1);
+  for (let i = 0; i < sibs.length; i++) sibs[i].sort_order = i + 1;
+  for (const s of changed){
+    const r = await sb.from('prins_people').update({sort_order: s.sort_order}).eq('id', s.id);
+    if (r.error){ alert(r.error.message); return; }
+  }
+  log(dragId, 'move', BYID.get(dragId).name);
+  index(); render();
+}
+
+async function move(id, d){
+  const k = BYID.get(id), sibs = kidsOf(BYID.get(k.parent_id) || null);
+  const i = sibs.findIndex(s => s.id === id), j = i + d;
+  if (j < 0 || j >= sibs.length) return;
+  const a = sibs[i], b = sibs[j];
+  const ao = a.sort_order, bo = b.sort_order;
+  const r1 = await sb.from('prins_people').update({sort_order: bo}).eq('id', a.id);
+  const r2 = await sb.from('prins_people').update({sort_order: ao}).eq('id', b.id);
+  if (r1.error || r2.error){ alert((r1.error || r2.error).message); return; }
+  a.sort_order = bo; b.sort_order = ao;
+  log(a.id, 'move', a.name);
+  index(); render();
+}
+
+async function del(){
+  if (!confirm('Delete ' + fullName(CUR) + '?')) return;
+  const id = CUR.id, up = CUR.spouse_of != null ? CUR.spouse_of : CUR.parent_id;
+  const r = await sb.from('prins_people').delete().eq('id', id);
+  if (r.error){ alert(r.error.message); return; }
+  log(id, 'delete', CUR.name);
+  PEOPLE = PEOPLE.filter(p => p.id !== id);
+  CUR = BYID.get(up); index(); counts(); render();
+}
+
+// Supabase keeps only the LAST sign-in per account, so record each one here as well,
+// plus one row when a returning session opens the app - once per browser session, not
+// per page load, or a refresh would look like a visit.
+function noteVisit(kind){
+  try {
+    if (kind === 'open' && sessionStorage.getItem('tal_seen')) return;
+    if (kind === 'open') sessionStorage.setItem('tal_seen', '1');
+  } catch (e) {}
+  sb.from('prins_visits').insert({
+    who: window.__email || '', kind: kind,
+    device: innerWidth < 768 ? 'mobile' : 'desktop'
+  }).then(() => {}, () => {});
+}
+
+function log(pid, action, detail){
+  sb.from('prins_log').insert({person_id: pid, action: action, detail: detail,
+    who: window.__email || ''}).then(() => {}, () => {});
+}
+
+// ---------- how am I related to this person ----------
+// Both people are located by their path down from the root. The length of the shared prefix
+// gives the common ancestor; the steps each of them stands below it give the relationship.
+// A spouse has no path of their own, so they are answered through the person they married.
+let ME = null;
+try { ME = localStorage.getItem('prins_me'); ME = ME ? +ME : null; } catch (e) {}
+
+const pathIds = p => pathOf(p).map(x => x.id);
+const gendered = (p, m, f) => p.sex === 'F' ? f : (p.sex === 'M' ? m : m + '/' + f);
+
+function greats(n, p){
+  // 1 = parent, 2 = grandparent, then a "great-" for every step beyond that
+  if (n === 1) return gendered(p, 'father', 'mother');
+  return 'great-'.repeat(Math.max(0, n - 2)) + gendered(p, 'grandfather', 'grandmother');
+}
+function downs(n, p){
+  if (n === 1) return gendered(p, 'son', 'daughter');
+  return 'great-'.repeat(Math.max(0, n - 2)) + gendered(p, 'grandson', 'granddaughter');
+}
+const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
+const ordinal = n => ORD[n] || (n + 'th');
+const removed = n => !n ? '' : n === 1 ? ', once removed'
+                             : n === 2 ? ', twice removed' : ', ' + n + ' times removed';
+
+function relation(me, them){
+  if (!me || !them) return '';
+  const myMate = partnerOf(me), theirMate = partnerOf(them);
+  const a = myMate || me, b = theirMate || them;
+  if (a.id === b.id){
+    if (me.id === them.id) return "that's me";
+    return 'my ' + gendered(them, 'husband', 'wife');
+  }
+  const pa = pathIds(a), pb = pathIds(b);
+  let L = 0;
+  while (L < pa.length && L < pb.length && pa[L] === pb[L]) L++;
+  const da = pa.length - L, db = pb.length - L;
+  let core;
+  if (L === 0) core = '';
+  else if (da === 0 && db === 0) core = 'me';
+  else if (da === 0) core = 'my ' + downs(db, b);
+  else if (db === 0) core = 'my ' + greats(da, b);
+  else if (da === 1 && db === 1) core = 'my ' + gendered(b, 'brother', 'sister');
+  else if (da === 1) core = 'my ' + 'great-'.repeat(Math.max(0, db - 2))
+                          + gendered(b, 'nephew', 'niece');
+  else if (db === 1) core = 'my ' + 'great-'.repeat(Math.max(0, da - 2))
+                          + gendered(b, 'uncle', 'aunt');
+  else {
+    const deg = Math.min(da, db) - 1, rem = Math.abs(da - db);
+    core = 'my ' + ordinal(deg) + ' cousin' + removed(rem);
+  }
+  if (!core) return '';
+  if (theirMate) return gendered(them, 'husband', 'wife') + ' of ' + core;
+  if (myMate) return core + ' \u2014 through my ' + gendered(myMate, 'husband', 'wife');
+  return core;
+}
+
+// The chain that makes the relationship: up from me to the ancestor we share, then back
+// down to them. Shown across the page so the whole connection is one line to read.
+function relChain(me, them){
+  const myMate = partnerOf(me), theirMate = partnerOf(them);
+  const a = myMate || me, b = theirMate || them;
+  const pa = pathOf(a), pb = pathOf(b);
+  let L = 0;
+  while (L < pa.length && L < pb.length && pa[L].id === pb[L].id) L++;
+  if (!L) return [];
+  const up = pa.slice(L - 1).reverse();      // me ... up to the shared ancestor
+  const down = pb.slice(L);                  // shared ancestor ... down to them
+  let chain = up.concat(down);
+  if (myMate) chain = [me].concat(chain);
+  if (theirMate) chain = chain.concat([them]);
+  const seen = new Set();
+  return chain.filter(x => !seen.has(x.id) && seen.add(x.id));
+}
+
+// Drawn as a small tree: the ancestor we share at the top, my line coming down one side and
+// theirs down the other, so the shape of the connection is visible rather than described.
+function chainHtml(me, them){
+  const myMate = partnerOf(me), theirMate = partnerOf(them);
+  const a = myMate || me, b = theirMate || them;
+  const pa = pathOf(a), pb = pathOf(b);
+  let L = 0;
+  while (L < pa.length && L < pb.length && pa[L].id === pb[L].id) L++;
+  if (!L) return '';
+  const anc = pa[L - 1];
+  let mine = pa.slice(L), theirs = pb.slice(L);
+  if (myMate) mine = mine.concat([me]);
+  if (theirMate) theirs = theirs.concat([them]);
+
+  const W = 168, H = 46, ROW = 74, GAP = 46;
+  const rows = 1 + Math.max(mine.length, theirs.length);
+  const two = mine.length && theirs.length;
+  const cx = two ? W + GAP / 2 : W / 2;                 // where the shared ancestor sits
+  const lx = 0, rx = two ? W + GAP : 0;                  // left and right columns
+  const width = two ? W * 2 + GAP : W;
+  const height = rows * ROW;
+  const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + '…' : t;
+
+  let g = '';
+  const box = (x, y, person, cls) =>
+      '<g class="rbx' + cls + '" data-go="' + person.id + '" transform="translate('
+      + x + ',' + y + ')">'
+      + '<rect width="' + W + '" height="' + H + '" rx="7"/>'
+      + '<text x="' + W / 2 + '" y="' + (person.surname ? 19 : 27) + '">'
+      + esc(cut(person.name, 20)) + '</text>'
+      + (person.surname ? '<text x="' + W / 2 + '" y="35" class="s">'
+          + esc(cut(person.surname, 22)) + '</text>' : '') + '</g>';
+
+  const col = (list, x, who) => {
+    let out = '';
+    list.forEach((person, i) => {
+      const y = (i + 1) * ROW;
+      out += '<path class="rln" d="M' + (x + W / 2) + ' ' + (y - ROW + H) + ' V' + y + '"/>';
+      out += box(x, y, person,
+        person.id === me.id ? ' me' : person.id === them.id ? ' them' : '');
+    });
+    return out;
+  };
+
+  if (two){
+    g += '<path class="rln" d="M' + (cx) + ' ' + H + ' V' + (ROW - 14)
+       + ' M' + (lx + W / 2) + ' ' + (ROW - 14) + ' H' + (rx + W / 2) + '"/>';
+    g += '<path class="rln" d="M' + (lx + W / 2) + ' ' + (ROW - 14) + ' V' + ROW + '"/>';
+    g += '<path class="rln" d="M' + (rx + W / 2) + ' ' + (ROW - 14) + ' V' + ROW + '"/>';
+  }
+  g += box(cx - W / 2, 0, anc, ' anc');
+  g += two ? col(mine, lx, 'me').replace(/<path class="rln" d="M[\d.]+ \d+ V74"\/>/, '')
+           : col(mine, lx, 'me');
+  g += two ? col(theirs, rx, 'them').replace(/<path class="rln" d="M[\d.]+ \d+ V74"\/>/, '')
+           : col(theirs, rx, 'them');
+
+  return '<div class="reltree"><svg viewBox="-6 -6 ' + (width + 12) + ' ' + (height + 12)
+       + '" width="' + (width + 12) + '" height="' + (height + 12) + '">' + g + '</svg></div>';
+}
+
+async function setMe(id){
+  ME = id;
+  try { id ? localStorage.setItem('prins_me', id) : localStorage.removeItem('prins_me'); } catch (e) {}
+  if (window.__setMeBtn) window.__setMeBtn();
+  render();
+}
+
+// ---------- who changed what ----------
+const ACTION_HE = {add: 'added', 'add spouse': 'added a spouse', edit: 'edited',
+                   move: 'reordered', merge: 'merged',
+                   cascade: 'applied a surname to the branch',
+                   swap: 'swapped', delete: 'deleted'};
+
+async function renderLog(){
+  $('logv').innerHTML = '<div class="card"><div class="who" style="font-size:19px">Change log</div>'
+    + '<div class="meta">loading…</div></div>';
+  const { data, error } = await sb.from('prins_log').select('*').order('id', {ascending: false}).limit(300);
+  if (error){ $('logv').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
+  const by = {};
+  data.forEach(r => { const w = r.who || '—'; by[w] = (by[w] || 0) + 1; });
+  const when = t => {
+    const d = new Date(t);
+    return d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
+  };
+  const rows = data.map(r => {
+    const p = BYID.get(r.person_id);
+    return '<tr><td>' + esc(when(r.at)) + '</td>'
+         + '<td>' + esc(ACTION_HE[r.action] || r.action) + '</td>'
+         + '<td>' + (p ? '<button class="link" data-go="' + p.id + '">' + esc(fullName(p)) + '</button>'
+                       : esc(r.detail || '—')) + '</td>'
+         + '<td class="who-cell">' + esc(r.who || '—') + '</td></tr>';
+  }).join('');
+  const vis = await sb.from('prins_visits').select('*').order('id', {ascending: false}).limit(200);
+  let visHtml = '';
+  if (!vis.error && vis.data.length){
+    const per = {};
+    vis.data.forEach(v => {
+      const k = v.who || '—';
+      per[k] = per[k] || {n: 0, last: v.at, dev: {}};
+      per[k].n++;
+      per[k].dev[v.device || '?'] = (per[k].dev[v.device || '?'] || 0) + 1;
+    });
+    visHtml = '<h3>Visits</h3><table class="logt"><thead><tr><th>Who</th><th>Visits</th>'
+      + '<th>Device</th><th>Last</th></tr></thead><tbody>'
+      + Object.entries(per).sort((a, b) => b[1].n - a[1].n).map(([w, d]) =>
+          '<tr><td>' + esc(w) + '</td><td>' + d.n + '</td><td class="who-cell">'
+          + esc(Object.entries(d.dev).map(([k, n]) => (k === 'mobile' ? 'mobile' : 'desktop') + ' ' + n).join(' · '))
+          + '</td><td class="who-cell">' + esc(when(d.last)) + '</td></tr>').join('')
+      + '</tbody></table>';
+  }
+  $('logv').innerHTML =
+      '<div class="card"><div class="who" style="font-size:19px">Log</div>'
+    + '<div class="meta">' + data.length + ' recent changes · '
+    + Object.entries(by).map(([w, n]) => esc(w) + ' (' + n + ')').join(' · ') + '</div></div>'
+    + visHtml
+    + '<h3>Changes</h3>'
+    + '<table class="logt"><thead><tr><th>When</th><th>What</th><th>Who in the tree</th><th>Changed by</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>';
+  $('logv').querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+    CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false;
+    location.hash = '#p' + CUR.id; showPerson(); render();
+  });
+}
+
+function showLog(){
+  document.body.classList.remove('wide');
+  $('person').style.display = 'none';
+  $('whole').style.display = 'none';
+  $('logv').style.display = '';
+  renderLog();
+}
+
+// ---------- the whole tree, as one long outline ----------
+function renderWhole(){
+  const r = root();
+  if (!r){ $('whole').innerHTML = ''; return; }
+  const line = (p, depth) => {
+    const m = spouseOf(p);
+    return '<li class="g' + depth + '">'
+      + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
+      + (p.deceased ? ' <span class="dead">z"l</span>' : '')
+      + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
+          + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
+      + (m ? ' <span class="amp">+</span> '
+             + '<span class="n" data-go="' + m.id + '">' + esc(fullName(m)) + '</span>'
+             + (m.deceased ? ' <span class="dead">z"l</span>' : '')
+             + (m.born || m.died ? ' <span class="sp">(' + esc(m.born || '')
+                 + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '') : '')
+      + kidsHtml(p, depth + 1) + '</li>';
+  };
+  const kidsHtml = (p, depth) => {
+    const k = kidsOf(p);
+    return k.length ? '<ul>' + k.map(c => line(c, depth)).join('') + '</ul>' : '';
+  };
+  // count the same way the header does: descendants of the root, not counting the root
+  let blood = 0;
+  (function walk(x){ kidsOf(x).forEach(c => { blood++; walk(c); }); })(r);
+  const mates = PEOPLE.filter(p => p.spouse_of != null).length;
+  $('whole').innerHTML = '<div class="card"><div class="who" style="font-size:19px">Whole tree</div>'
+    + '<div class="meta">' + blood + ' descendants · ' + mates + ' spouses'
+    + ' · you can print this from the browser</div></div>'
+    + '<ul class="full">' + line(r, 1) + '</ul>';
+  document.querySelectorAll('#whole [data-go]').forEach(b => b.onclick = () => {
+    CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false;
+    location.hash = '#p' + CUR.id; showPerson(); render();
+  });
+}
+
+function showWhole(){
+  document.body.classList.remove('wide');
+  $('logv').style.display = 'none';
+  $('person').style.display = 'none';
+  $('whole').style.display = '';
+  const b = $('treeBtn'); if (b) b.textContent = 'Back';
+  renderWhole();
+}
+function showPerson(){
+  document.body.classList.remove('wide');
+  $('logv').style.display = 'none';
+  $('whole').style.display = 'none';
+  $('person').style.display = '';
+  const b = $('treeBtn'); if (b) b.textContent = 'Whole tree';
+}
+
+// ---------- search ----------
+// Searching has to survive three things at once: the tree mixes Hebrew given names with
+// Latin surnames; Hebrew spelling of the same name varies (אילת / איילת, נעם / נועם); and
+// people look for someone in whichever script comes to hand. So every field is searched,
+// Hebrew is normalised, and both sides are reduced to a consonant skeleton so that typing
+// "dalia" finds דליה.
+const FINALS = {'ם':'מ','ן':'נ','ץ':'צ','ף':'פ','ך':'כ'};
+
+function norm(s){
+  return (s || '').toLowerCase()
+    .replace(/[םןץףך]/g, c => FINALS[c])
+    .replace(/["'׳״’‘`\-]/g, '')
+    .replace(/י{2,}/g, 'י')
+    .replace(/ו{2,}/g, 'ו');
+}
+
+const HEB2LAT = {'א':'','ב':'b','ג':'g','ד':'d','ה':'h','ו':'',
+  'ז':'z','ח':'h','ט':'t','י':'','כ':'k','ל':'l','מ':'m',
+  'נ':'n','ס':'s','ע':'','פ':'f','צ':'z','ק':'k','ר':'r',
+  'ש':'s','ת':'t'};
+
+function skel(s){
+  let t = norm(s);
+  t = t.replace(/sh|ch|kh|tz|ts|ph/g, m => ({sh:'s',ch:'h',kh:'h',tz:'z',ts:'z',ph:'f'}[m]));
+  let out = '';
+  for (const c of t){
+    if (HEB2LAT[c] !== undefined) out += HEB2LAT[c];
+    // v and b are one letter in Hebrew (ב), so "tzvi" has to reach צבי
+    else if (/[a-z]/.test(c)) out += 'aeiouwy'.includes(c) ? '' : ({c: 'k', v: 'b'}[c] || c);
+    else if (/\s/.test(c)) out += ' ';
+  }
+  // a final ה is a vowel marker, not a consonant: דליה and "dalia" must reduce alike
+  return out.replace(/(.)\1+/g, '$1').replace(/\s+/g, ' ').trim()
+            .split(' ').map(w => w.replace(/h$/, '')).join(' ');
+}
+
+function hay(p){
+  return [p.name, p.surname, p.maiden, p.spouse, p.spouse_maiden, p.name_en, p.alt, p.phone]
+    .filter(Boolean).join(' ');
+}
+
+function search(){
+  const q = $('q').value.trim();
+  if (q.length < 2){ $('hits').innerHTML = ''; return; }
+  const nq = norm(q), sq = skel(q);
+  const scored = [];
+  PEOPLE.forEach(p => {
+    const h = hay(p), nh = norm(h);
+    let s = 0;
+    // a name that STARTS with what was typed beats one that merely contains it, so
+    // searching "dalia" does not bury דליה under everyone surnamed Guedalia
+    const sh = skel(h).split(' ');
+    if (nh.split(/\s+/).some(w => w.startsWith(nq))) s = 5;
+    else if (sq.length >= 2 && sh.includes(sq)) s = 4;          // same name, other script
+    else if (nh.includes(nq)) s = 3;
+    else if (sq.length >= 2 && sh.some(w => w.startsWith(sq))) s = 2;
+    if (s) scored.push([s, p]);
+  });
+  const hit = scored.sort((a, b) => b[0] - a[0]).map(x => x[1]).slice(0, 30);
+  $('hits').innerHTML = hit.length
+    ? '<div class="hits">' + hit.map(p => '<div class="hit" data-go="' + p.id + '">'
+        + '<div>' + esc(fullName(p)) + '</div><div class="p">'
+        + esc(pathOf(p).slice(0, -1).map(a => a.name).reverse().join(' ‹ ')) + '</div></div>').join('') + '</div>'
+    : '<div class="empty">Nothing found.</div>';
+  document.querySelectorAll('#hits [data-go]').forEach(b => b.onclick = () => {
+    CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false;
+    $('q').value = ''; $('hits').innerHTML = '';
+    location.hash = '#p' + CUR.id; render();
+  });
+}
+
+// The header names the couple everyone here descends from, and says how far they reached.
+function counts(){
+  const r = root();
+  if (!r){ $('counts').textContent = PEOPLE.length + ' people'; return; }
+  const m = spouseOf(r);
+  const couple = [r, m].filter(Boolean);
+  const nm = couple.map(x => x.name).join(' ו') + (r.surname ? ' ' + r.surname : '');
+  let deepest = 0, blood = 0;
+  (function walk(p, d){
+    deepest = Math.max(deepest, d);
+    kidsOf(p).forEach(c => { blood++; walk(c, d + 1); });
+  })(r, 1);
+  document.querySelector('header h1').textContent = nm;
+  $('counts').textContent = blood + ' descendants · ' + deepest + ' דורות · '
+    + (PEOPLE.length - blood - couple.length) + ' spouses';
+  document.title = nm + ' — עץ המשפחה';
+}
+
+// ---------- boot ----------
+async function load(){
+  const adm = await sb.from('prins_admins').select('email').eq('email', window.__email || '');
+  IS_ADMIN = !adm.error && (adm.data || []).length > 0;
+  const { data, error } = await sb.from('prins_people').select('*');
+  if (error){ $('person').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
+  PEOPLE = data; index(); counts();
+  const h = location.hash.match(/^#p(\d+)$/);
+  CUR = h ? (BYID.get(+h[1]) || root()) : root();
+  $('login').style.display = 'none';
+  $('app').style.display = '';
+  $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
+    + ' <button class="ghost" id="treeBtn">Whole tree</button>'
+    + (IS_ADMIN ? ' <button class="ghost" id="logBtn">Log</button>' : '')
+    + ' <span class="sub">' + esc(window.__email || '') + '</span>'
+    + ' <button class="ghost" id="pwBtn">Password</button>'
+    + ' <button class="ghost" id="out">Sign out</button>';
+  const setMeBtn = () => {
+    const m = ME && BYID.get(ME);
+    $('meBtn').textContent = m ? 'Me: ' + m.name : 'Who אני?';
+    $('meBtn').onclick = () => {
+      if (m){ CUR = m; location.hash = '#p' + m.id; showPerson(); render(); }
+      else alert('פתחו את הכרטיס שלכם בעץ ולחצו "that's me".');
+    };
+  };
+  window.__setMeBtn = setMeBtn; setMeBtn();
+  if ($('logBtn')) $('logBtn').onclick = () => {
+    if ($('logv').style.display === 'none'){ location.hash = '#log'; showLog(); }
+    else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); render(); }
+  };
+  $('treeBtn').onclick = () => {
+    if ($('whole').style.display === 'none'){ location.hash = '#tree'; showWhole(); }
+    else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); }
+  };
+  $('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  $('pwBtn').onclick = () => {
+    $('pwCard').style.display = ''; $('pwMsg').innerHTML = '';
+    $('pw1').value = ''; $('pw2').value = ''; $('pw1').focus();
+  };
+  $('pwCancel').onclick = () => { $('pwCard').style.display = 'none'; };
+  $('pwSave').onclick = async () => {
+    const a = $('pw1').value, b = $('pw2').value;
+    if (a.length < 8){ $('pwMsg').innerHTML = '<div class="note err">לפחות 8 תווים.</div>'; return; }
+    if (a !== b){ $('pwMsg').innerHTML = '<div class="note err">שתי הסיסמאות לא זהות.</div>'; return; }
+    $('pwSave').disabled = true;
+    $('pwSave').innerHTML = '<span class="spin"></span>שומר…';
+    const { error } = await sb.auth.updateUser({ password: a });
+    $('pwSave').disabled = false;
+    $('pwSave').textContent = 'Save';
+    if (error){ $('pwMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
+    $('pwMsg').innerHTML = '<div class="note ok">הPassword שונתה.</div>';
+    $('pw1').value = ''; $('pw2').value = '';
+  };
+  $('foot').textContent = 'כל שינוי נשמר Whoד ונראה לכולם.';
+  render();
+  if (location.hash === '#tree') showWhole();
+  if (location.hash === '#log' && IS_ADMIN) showLog();
+}
+
+async function boot(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (session){ window.__email = session.user.email; noteVisit('open'); return load(); }
+  $('login').style.display = '';
+  const busy = on => {
+    $('go').disabled = on;
+    $('em').disabled = on;
+    $('pw').disabled = on;
+    $('go').innerHTML = on ? '<span class="spin"></span>signing in…' : 'Sign in';
+  };
+  const tryIn = async () => {
+    if ($('go').disabled) return;
+    if (!$('em').value.trim() || !$('pw').value){
+      $('loginMsg').innerHTML = '<div class="note err">צריך Whoיל וPassword.</div>';
+      return;
+    }
+    busy(true);
+    $('loginMsg').innerHTML = '';
+    const { error } = await sb.auth.signInWithPassword({
+      email: asEmail($('em').value), password: $('pw').value });
+    if (error){
+      busy(false);
+      $('loginMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>';
+      $('pw').select();
+      return;
+    }
+    const { data: { session } } = await sb.auth.getSession();
+    window.__email = session.user.email;
+    noteVisit('login');
+    load();                       // stays busy until the tree replaces the form
+  };
+  // a real form, so Enter submits from either field and password managers behave
+  $('loginForm').onsubmit = e => { e.preventDefault(); tryIn(); };
+  $('em').focus();
+}
+
+$('q').oninput = search;
+addEventListener('hashchange', () => {
+  if (!BYID.size) return;
+  if (location.hash === '#tree'){ showWhole(); return; }
+  if (location.hash === '#log'){ if (IS_ADMIN) showLog(); return; }
+  const h = location.hash.match(/^#p(\d+)$/);
+  if (h){ CUR = BYID.get(+h[1]) || CUR; EDIT = null; ADD = false; showPerson(); render(); }
+});
+boot();
+</script>
+</body>
+</html>
