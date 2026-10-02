@@ -150,6 +150,8 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
   .kid .grip{font-size:22px;padding:8px 4px}
   button.tiny{padding:6px 12px;font-size:17px}
 }
+.num{font:600 12.5px/1.3 ui-monospace,Consolas,monospace;opacity:.6;letter-spacing:.02em;margin-bottom:2px;direction:ltr;text-align:start}
+.numk{font:600 11.5px ui-monospace,Consolas,monospace;opacity:.55;margin-inline-end:5px;direction:ltr;unicode-bidi:isolate}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 </head>
@@ -229,20 +231,45 @@ let IS_ADMIN = false;
 // so they can carry their own surname, birth name and dates. Children still hang off the
 // family member, so a spouse never appears in the list of children.
 let SPOUSE = new Map();
+// family numbers: root is <prefix>1, its third child <prefix>1.3, a spouse <number>S (S1, S2 ... when
+// there is more than one). Worked out from the tree order every time it is indexed.
+const NUMBERED = true, NUM_PREFIX = 'P';
+let NUM = new Map(), BYNUM = new Map();
 
 function index(){
   BYID = new Map(); KIDS = new Map(); SPOUSE = new Map();
   PEOPLE.forEach(p => BYID.set(p.id, p));
   PEOPLE.forEach(p => {
-    if (p.spouse_of != null){ SPOUSE.set(p.spouse_of, p); return; }
+    if (p.spouse_of != null){
+      if (!SPOUSE.has(p.spouse_of)) SPOUSE.set(p.spouse_of, []);
+      SPOUSE.get(p.spouse_of).push(p);
+      return;
+    }
     const k = p.parent_id == null ? 'root' : p.parent_id;
     if (!KIDS.has(k)) KIDS.set(k, []);
     KIDS.get(k).push(p);
   });
   KIDS.forEach(a => a.sort((x, y) => (x.sort_order - y.sort_order) || x.id - y.id));
+  SPOUSE.forEach(a => a.sort((x, y) => ((x.sort_order || 0) - (y.sort_order || 0)) || x.id - y.id));
+  numbers();
+}
+function numbers(){
+  NUM = new Map(); BYNUM = new Map();
+  if (!NUMBERED) return;
+  const r = (KIDS.get('root') || [])[0];
+  if (!r) return;
+  (function walk(p, n){
+    NUM.set(p.id, n);
+    const sp = SPOUSE.get(p.id) || [];
+    sp.forEach((s, i) => NUM.set(s.id, n + 'S' + (sp.length > 1 ? (i + 1) : '')));
+    (KIDS.get(p.id) || []).forEach((k, i) => walk(k, n + '.' + (i + 1)));
+  })(r, NUM_PREFIX + '1');
+  NUM.forEach((n, id) => BYNUM.set(n.toUpperCase(), id));
 }
 const kidsOf = p => KIDS.get(p == null ? 'root' : p.id) || [];
-const spouseOf = p => (p && p.spouse_of == null) ? SPOUSE.get(p.id) : null;
+const spouseOf = p => (p && p.spouse_of == null) ? ((SPOUSE.get(p.id) || [])[0] || null) : null;
+const spousesOf = p => (p && p.spouse_of == null) ? (SPOUSE.get(p.id) || []) : [];
+const numTag = (id, cls) => NUM.get(id) ? '<span class="' + cls + '">' + esc(NUM.get(id)) + '</span>' : '';
 const partnerOf = p => (p && p.spouse_of != null) ? BYID.get(p.spouse_of) : null;
 const root = () => (KIDS.get('root') || [])[0];
 
@@ -278,6 +305,7 @@ function render(){
 
   let h = '<div class="card">';
   if (crumb) h += '<div class="crumb">' + crumb + ' ‹</div>';
+  if (NUM.get(p.id)) h += '<div class="num">' + esc(NUM.get(p.id)) + '</div>';
   h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">z"l</span>' : '') + '</div>';
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
@@ -290,8 +318,8 @@ function render(){
     h += '<div class="meta">spouse of <button class="link" data-go="' + owner.id + '">'
        + esc(fullName(owner)) + '</button></div>';
   } else if (mate){
-    h += '<div class="meta">married to <button class="link" data-go="' + mate.id + '">'
-       + esc(fullName(mate)) + '</button>' + (mate.deceased ? ' <span class="dead">z"l</span>' : '')
+    h += '<div class="meta">married to ' + spousesOf(p).map(m => '<button class="link" data-go="' + m.id + '">'
+       + esc(fullName(m)) + '</button>' + (m.deceased ? ' <span class="dead">z"l</span>' : '')).join(', ')
        + '</div>';
   }
   if (!owner){
@@ -313,7 +341,7 @@ function render(){
      + (!ME ? '<button class="ghost" id="bMe">that’s me</button>'
             : ME === p.id ? '<button class="ghost" id="bNotMe">that’s not me</button>' : '')
      + (owner ? '' : '<button class="big" id="bAdd">+ Add child</button>')
-     + (owner || mate ? '' : '<button class="big" id="bSpouse">+ Add spouse</button>')
+     + (owner ? '' : '<button class="big" id="bSpouse">+ Add spouse</button>')
      + '<button class="ghost" id="bEdit">Edit</button>'
      + ((owner || (p.parent_id != null && kids.length === 0)) ? '<button class="danger" id="bDel">Delete</button>' : '')
      + '</div>';
@@ -338,7 +366,7 @@ function render(){
          + '<button class="tiny" data-mv="' + k.id + '" data-d="-1"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
          + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
          + '</span>'
-         + '<span class="nm" data-go="' + k.id + '">' + esc(fullName(k))
+         + '<span class="nm" data-go="' + k.id + '">' + numTag(k.id, 'numk') + esc(fullName(k))
          + (k.deceased ? ' <span class="dead">z"l</span>' : '')
  + '</span>'
          + '<span class="ct">' + (n ? n + ' children' : '') + '</span>'
@@ -451,7 +479,7 @@ async function cascade(person, oldSur, newSur){
   (function walk(p){
     kidsOf(p).forEach(c => {
       if (c.relation !== 'step' && (c.surname || '').trim() === oldSur) hit.push(c);
-      const m = SPOUSE.get(c.id);
+      const m = (SPOUSE.get(c.id) || [])[0];
       if (m && (m.surname || '').trim() === oldSur && c.sex === 'M') hit.push(m);
       if (c.relation !== 'step') walk(c);
     });
@@ -790,17 +818,17 @@ function renderWhole(){
   const r = root();
   if (!r){ $('whole').innerHTML = ''; return; }
   const line = (p, depth) => {
-    const m = spouseOf(p);
     return '<li class="g' + depth + '">'
+      + numTag(p.id, 'numk')
       + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
       + (p.deceased ? ' <span class="dead">z"l</span>' : '')
       + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
           + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
-      + (m ? ' <span class="amp">+</span> '
+      + spousesOf(p).map(m => ' <span class="amp">+</span> '
              + '<span class="n" data-go="' + m.id + '">' + esc(fullName(m)) + '</span>'
              + (m.deceased ? ' <span class="dead">z"l</span>' : '')
              + (m.born || m.died ? ' <span class="sp">(' + esc(m.born || '')
-                 + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '') : '')
+                 + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '')).join('')
       + kidsHtml(p, depth + 1) + '</li>';
   };
   const kidsHtml = (p, depth) => {
@@ -877,28 +905,46 @@ function hay(p){
   return [p.name, p.surname, p.maiden, p.spouse, p.spouse_maiden, p.name_en, p.alt, p.phone]
     .filter(Boolean).join(' ');
 }
+const WORDS = s => norm(s).split(/[\s()\[\],.;:\/]+/).filter(Boolean);
 
 function search(){
   const q = $('q').value.trim();
   if (q.length < 2){ $('hits').innerHTML = ''; return; }
-  const nq = norm(q), sq = skel(q);
+  // every typed word has to match some word of the person, each on its own, so first name +
+  // surname finds someone with middle names in between. A word that STARTS a name beats one that
+  // merely contains it, so searching "dalia" does not bury דליה under everyone surnamed Guedalia.
+  const qw = WORDS(q);
+  const numq = NUMBERED && /^[a-z]?\d+(\.\d+)*(s\d*)?$/i.test(q)
+    ? (/^\d/.test(q) ? NUM_PREFIX + q : q).toUpperCase() : null;
   const scored = [];
   PEOPLE.forEach(p => {
-    const h = hay(p), nh = norm(h);
     let s = 0;
-    // a name that STARTS with what was typed beats one that merely contains it, so
-    // searching "dalia" does not bury דליה under everyone surnamed Guedalia
-    const sh = skel(h).split(' ');
-    if (nh.split(/\s+/).some(w => w.startsWith(nq))) s = 5;
-    else if (sq.length >= 2 && sh.includes(sq)) s = 4;          // same name, other script
-    else if (nh.includes(nq)) s = 3;
-    else if (sq.length >= 2 && sh.some(w => w.startsWith(sq))) s = 2;
+    const num = (NUM.get(p.id) || '').toUpperCase();
+    if (numq && num){
+      if (num === numq) s = 100;
+      else if (num.startsWith(numq + '.') || num.startsWith(numq + 'S')) s = 1;
+    }
+    if (!s && qw.length){
+      const h = hay(p), words = WORDS(h), sk = skel(h).split(' ');
+      for (const w of qw){
+        const sw = skel(w);
+        let b = 0;
+        if (words.includes(w)) b = 6;
+        else if (words.some(x => x.startsWith(w))) b = 5;
+        else if (sw.length >= 2 && sk.includes(sw)) b = 4;          // same name, other script
+        else if (w.length >= 3 && words.some(x => x.includes(w))) b = 3;
+        else if (sw.length >= 2 && sk.some(x => x.startsWith(sw))) b = 2;
+        if (!b){ s = 0; break; }
+        s += b;
+      }
+    }
     if (s) scored.push([s, p]);
   });
-  const hit = scored.sort((a, b) => b[0] - a[0]).map(x => x[1]).slice(0, 30);
+  const hit = scored.sort((a, b) => (b[0] - a[0]) || ((NUM.get(a[1].id) || '').length - (NUM.get(b[1].id) || '').length))
+                    .map(x => x[1]).slice(0, 30);
   $('hits').innerHTML = hit.length
     ? '<div class="hits">' + hit.map(p => '<div class="hit" data-go="' + p.id + '">'
-        + '<div>' + esc(fullName(p)) + '</div><div class="p">'
+        + '<div>' + numTag(p.id, 'numk') + esc(fullName(p)) + '</div><div class="p">'
         + esc(pathOf(p).slice(0, -1).map(a => a.name).reverse().join(' ‹ ')) + '</div></div>').join('') + '</div>'
     : '<div class="empty">Nothing found.</div>';
   document.querySelectorAll('#hits [data-go]').forEach(b => b.onclick = () => {
@@ -912,9 +958,9 @@ function search(){
 function counts(){
   const r = root();
   if (!r){ $('counts').textContent = PEOPLE.length + ' people'; return; }
-  const m = spouseOf(r);
-  const couple = [r, m].filter(Boolean);
-  const nm = couple.map(x => x.name).join(' & ') + (r.surname ? ' ' + r.surname : '');
+  const ms = spousesOf(r);
+  const couple = [r].concat(ms);
+  const nm = (ms.length === 1 ? couple.map(x => x.name).join(' & ') : r.name) + (r.surname ? ' ' + r.surname : '');
   let deepest = 0, blood = 0;
   (function walk(p, d){
     deepest = Math.max(deepest, d);
@@ -941,8 +987,8 @@ async function load(){
   }
   if (error){ $('person').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
   PEOPLE = data; index(); counts();
-  const h = location.hash.match(/^#p(\d+)$/);
-  CUR = h ? (BYID.get(+h[1]) || root()) : root();
+  const h = location.hash.match(/^#p(\d+)$/), hn = location.hash.match(/^#([a-z]\d[\d.]*(s\d*)?)$/i);
+  CUR = h ? (BYID.get(+h[1]) || root()) : hn ? (BYID.get(BYNUM.get(hn[1].toUpperCase())) || root()) : root();
   $('login').style.display = 'none';
   $('app').style.display = '';
   $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
@@ -1034,8 +1080,11 @@ addEventListener('hashchange', () => {
   if (!BYID.size) return;
   if (location.hash === '#tree'){ showWhole(); return; }
   if (location.hash === '#log'){ if (IS_ADMIN) showLog(); return; }
-  const h = location.hash.match(/^#p(\d+)$/);
+  const h = location.hash.match(/^#p(\d+)$/), hn = location.hash.match(/^#([a-z]\d[\d.]*(s\d*)?)$/i);
   if (h){ CUR = BYID.get(+h[1]) || CUR; EDIT = null; ADD = false; showPerson(); render(); }
+  else if (hn && BYNUM.has(hn[1].toUpperCase())){
+    CUR = BYID.get(BYNUM.get(hn[1].toUpperCase())); EDIT = null; ADD = false; showPerson(); render();
+  }
 });
 boot();
 </script>
