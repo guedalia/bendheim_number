@@ -152,6 +152,7 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 }
 .num{font:600 12.5px/1.3 ui-monospace,Consolas,monospace;opacity:.6;letter-spacing:.02em;margin-bottom:2px;direction:ltr;text-align:start}
 .numk{font:600 11.5px ui-monospace,Consolas,monospace;opacity:.55;margin-inline-end:5px;direction:ltr;unicode-bidi:isolate}
+#fOther{width:100%;font:inherit;padding:9px 10px;border-radius:10px;border:1px solid rgba(127,127,127,.45);background:transparent;color:inherit}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 </head>
@@ -235,6 +236,7 @@ let SPOUSE = new Map();
 // there is more than one). Worked out from the tree order every time it is indexed.
 const NUMBERED = true, NUM_PREFIX = 'P';
 let NUM = new Map(), BYNUM = new Map();
+const LBL = {parents: 'Parents: ', childrenWith: 'Children with ', other: 'Other parent', unknown: 'not recorded', otherUnknown: 'other parent not recorded: '};
 
 function index(){
   BYID = new Map(); KIDS = new Map(); SPOUSE = new Map();
@@ -252,6 +254,40 @@ function index(){
   KIDS.forEach(a => a.sort((x, y) => (x.sort_order - y.sort_order) || x.id - y.id));
   SPOUSE.forEach(a => a.sort((x, y) => ((x.sort_order || 0) - (y.sort_order || 0)) || x.id - y.id));
   numbers();
+}
+// A parent who married in is still a parent. If they are the other parent of someone on my line
+// they are my ancestor; if I am the other parent of someone on their line, they descend from me.
+function otherParentRel(me, them, myMate, theirMate){
+  if (theirMate && !myMate){
+    const pa = pathOf(me);
+    for (let i = pa.length - 1; i >= 0; i--) if (pa[i].other_parent_id === them.id) return {up: true, n: pa.length - i};
+  }
+  if (myMate && !theirMate){
+    const pb = pathOf(them);
+    for (let i = pb.length - 1; i >= 0; i--) if (pb[i].other_parent_id === me.id) return {up: false, n: pb.length - i};
+  }
+  return null;
+}
+// Two lines that meet at one person but come down from different partners of theirs are half-relations.
+// Only said when both other parents are known.
+function isHalf(pa, pb, L){
+  if (L < 1 || L >= pa.length || L >= pb.length) return false;
+  const x = BYID.get(pa[L]), y = BYID.get(pb[L]);
+  return !!(x && y && x.other_parent_id && y.other_parent_id && x.other_parent_id !== y.other_parent_id);
+}
+function otherTag(parent, k){
+  const o = k.other_parent_id ? BYID.get(k.other_parent_id) : null;
+  return (o && spousesOf(parent).length > 1) ? ' <span class="sp">· ' + esc(o.name) + '</span>' : '';
+}
+function otherParentField(p){
+  if (ADD === 'spouse') return '';
+  const par = ADD ? CUR : (p.spouse_of == null && p.parent_id != null ? BYID.get(p.parent_id) : null);
+  const sps = par ? spousesOf(par) : [];
+  if (!sps.length) return '';
+  const cur = ADD ? (sps.length === 1 ? sps[0].id : null) : p.other_parent_id;
+  return '<div><label>' + LBL.other + '</label><select id="fOther"><option value="">' + LBL.unknown + '</option>'
+    + sps.map(s => '<option value="' + s.id + '"' + (cur === s.id ? ' selected' : '') + '>' + esc(fullName(s)) + '</option>').join('')
+    + '</select></div>';
 }
 function numbers(){
   NUM = new Map(); BYNUM = new Map();
@@ -322,10 +358,23 @@ function render(){
        + esc(fullName(m)) + '</button>' + (m.deceased ? ' <span class="dead">z"l</span>' : '')).join(', ')
        + '</div>';
   }
+  if (!owner && p.parent_id != null && p.other_parent_id != null && BYID.get(p.other_parent_id) && BYID.get(p.parent_id)){
+    const par = BYID.get(p.parent_id), op = BYID.get(p.other_parent_id);
+    h += '<div class="meta">' + LBL.parents + '<button class="link" data-go="' + par.id + '">' + esc(fullName(par))
+       + '</button> &amp; <button class="link" data-go="' + op.id + '">' + esc(fullName(op)) + '</button></div>';
+  }
   if (!owner){
     const dc = descCount(p);
     h += '<div class="meta">' + (kids.length ? kids.length + ' children' : 'no children recorded')
        + (dc > kids.length ? ' · ' + dc + ' descendants in all' : '') + '</div>';
+    const sps = spousesOf(p);
+    if (sps.length > 1 && kids.length){
+      const parts = sps.map(s => [s, kids.filter(k => k.other_parent_id === s.id).length]).filter(x => x[1])
+        .map(x => LBL.childrenWith + '<button class="link" data-go="' + x[0].id + '">' + esc(fullName(x[0])) + '</button>: ' + x[1]);
+      const none = kids.filter(k => !sps.some(s => s.id === k.other_parent_id)).length;
+      if (none) parts.push(LBL.otherUnknown + none);
+      h += '<div class="meta">' + parts.join(' · ') + '</div>';
+    }
   }
   if (ME && BYID.get(ME)){
     const meP = BYID.get(ME), rel = relation(meP, p);
@@ -369,6 +418,7 @@ function render(){
          + '<span class="nm" data-go="' + k.id + '">' + numTag(k.id, 'numk') + esc(fullName(k))
          + (k.deceased ? ' <span class="dead">z"l</span>' : '')
  + '</span>'
+         + otherTag(p, k)
          + '<span class="ct">' + (n ? n + ' children' : '') + '</span>'
          + '</div>';
     });
@@ -391,6 +441,7 @@ function form(p, isNew){
    + '<div><label>Date of death</label><input type="text" id="fDied" value="' + v('died') + '"></div>'
    + '<div><label>Hebrew name</label><input type="text" id="fEn" value="' + v('name_en') + '"></div>'
    + '<div><label>Note</label><input type="text" id="fNote" value="' + v('note') + '"></div>'
+   + otherParentField(p)
    + '</div>'
    + '<div style="margin-top:12px"><label>Male or female</label>'
    + '<span class="sexpick">'
@@ -444,6 +495,7 @@ async function save(){
     relation: (ADD ? 'child' : (CUR.relation || 'child')),
     updated_at: new Date().toISOString()
   };
+  if ($('fOther')) row.other_parent_id = $('fOther').value ? +$('fOther').value : null;
   const wasSurname = (ADD ? '' : (CUR.surname || '')).trim();
   if (!row.name){ $('formMsg').innerHTML = '<div class="note err">A first name is required.</div>'; return; }
   $('fSave').disabled = true;
@@ -639,6 +691,8 @@ function relation(me, them){
     if (me.id === them.id) return "that’s me";
     return 'my ' + gendered(them, 'husband', 'wife');
   }
+  const via = otherParentRel(me, them, myMate, theirMate);
+  if (via) return 'my ' + (via.up ? greats(via.n, them) : downs(via.n, them));
   const pa = pathIds(a), pb = pathIds(b);
   let L = 0;
   while (L < pa.length && L < pb.length && pa[L] === pb[L]) L++;
@@ -656,6 +710,14 @@ function relation(me, them){
   else {
     const deg = Math.min(da, db) - 1, rem = Math.abs(da - db);
     core = 'my ' + ordinal(deg) + ' cousin' + removed(rem);
+  }
+  if (core && da >= 1 && db >= 1 && isHalf(pa, pb, L))
+    core = 'my half' + (core.includes('cousin') ? ' ' : '-') + core.slice(3);
+  // my husband's child by another marriage is my stepchild, not "my son"
+  if (myMate && !theirMate && da === 0 && db >= 1){
+    const first = BYID.get(pb[L]);
+    if (first && first.other_parent_id && first.other_parent_id !== me.id)
+      return 'my step' + (db === 1 ? '' : '-') + downs(db, b);
   }
   if (!core) return '';
   if (theirMate) return gendered(them, 'husband', 'wife') + ' of ' + core;
