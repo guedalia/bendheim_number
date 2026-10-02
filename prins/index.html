@@ -593,8 +593,8 @@ async function del(){
 // per page load, or a refresh would look like a visit.
 function noteVisit(kind){
   try {
-    if (kind === 'open' && sessionStorage.getItem('tal_seen')) return;
-    if (kind === 'open') sessionStorage.setItem('tal_seen', '1');
+    if (kind === 'open' && sessionStorage.getItem('prins_seen')) return;
+    if (kind === 'open') sessionStorage.setItem('prins_seen', '1');
   } catch (e) {}
   sb.from('prins_visits').insert({
     who: window.__email || '', kind: kind,
