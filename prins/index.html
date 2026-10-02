@@ -930,7 +930,15 @@ function counts(){
 async function load(){
   const adm = await sb.from('prins_admins').select('email').eq('email', window.__email || '');
   IS_ADMIN = !adm.error && (adm.data || []).length > 0;
-  const { data, error } = await sb.from('prins_people').select('*');
+  // Supabase returns at most 1000 rows per request, so read the table in pages
+  const data = [];
+  let error = null;
+  for (let from = 0; ; from += 1000){
+    const r = await sb.from('prins_people').select('*').order('id').range(from, from + 999);
+    if (r.error){ error = r.error; break; }
+    data.push(...r.data);
+    if (r.data.length < 1000) break;
+  }
   if (error){ $('person').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
   PEOPLE = data; index(); counts();
   const h = location.hash.match(/^#p(\d+)$/);
