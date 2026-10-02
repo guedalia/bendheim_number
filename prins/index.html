@@ -914,16 +914,16 @@ function counts(){
   if (!r){ $('counts').textContent = PEOPLE.length + ' people'; return; }
   const m = spouseOf(r);
   const couple = [r, m].filter(Boolean);
-  const nm = couple.map(x => x.name).join(' ו') + (r.surname ? ' ' + r.surname : '');
+  const nm = couple.map(x => x.name).join(' & ') + (r.surname ? ' ' + r.surname : '');
   let deepest = 0, blood = 0;
   (function walk(p, d){
     deepest = Math.max(deepest, d);
     kidsOf(p).forEach(c => { blood++; walk(c, d + 1); });
   })(r, 1);
   document.querySelector('header h1').textContent = nm;
-  $('counts').textContent = blood + ' descendants · ' + deepest + ' דורות · '
+  $('counts').textContent = blood + ' descendants · ' + deepest + ' generations · '
     + (PEOPLE.length - blood - couple.length) + ' spouses';
-  document.title = nm + ' — עץ המשפחה';
+  document.title = nm + ' — family tree';
 }
 
 // ---------- boot ----------
@@ -945,10 +945,10 @@ async function load(){
     + ' <button class="ghost" id="out">Sign out</button>';
   const setMeBtn = () => {
     const m = ME && BYID.get(ME);
-    $('meBtn').textContent = m ? 'Me: ' + m.name : 'Who אני?';
+    $('meBtn').textContent = m ? 'Me: ' + m.name : 'Who am I?';
     $('meBtn').onclick = () => {
       if (m){ CUR = m; location.hash = '#p' + m.id; showPerson(); render(); }
-      else alert('פתחו את הכרטיס שלכם בעץ ולחצו "that’s me".');
+      else alert('Open your own card in the tree and press “that’s me”.');
     };
   };
   window.__setMeBtn = setMeBtn; setMeBtn();
@@ -968,18 +968,18 @@ async function load(){
   $('pwCancel').onclick = () => { $('pwCard').style.display = 'none'; };
   $('pwSave').onclick = async () => {
     const a = $('pw1').value, b = $('pw2').value;
-    if (a.length < 8){ $('pwMsg').innerHTML = '<div class="note err">לפחות 8 תווים.</div>'; return; }
-    if (a !== b){ $('pwMsg').innerHTML = '<div class="note err">שתי הסיסמאות לא זהות.</div>'; return; }
+    if (a.length < 8){ $('pwMsg').innerHTML = '<div class="note err">At least 8 characters.</div>'; return; }
+    if (a !== b){ $('pwMsg').innerHTML = '<div class="note err">The two passwords do not match.</div>'; return; }
     $('pwSave').disabled = true;
-    $('pwSave').innerHTML = '<span class="spin"></span>שומר…';
+    $('pwSave').innerHTML = '<span class="spin"></span>Saving…';
     const { error } = await sb.auth.updateUser({ password: a });
     $('pwSave').disabled = false;
     $('pwSave').textContent = 'Save';
     if (error){ $('pwMsg').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
-    $('pwMsg').innerHTML = '<div class="note ok">הPassword שונתה.</div>';
+    $('pwMsg').innerHTML = '<div class="note ok">Password changed.</div>';
     $('pw1').value = ''; $('pw2').value = '';
   };
-  $('foot').textContent = 'כל שינוי נשמר Whoד ונראה לכולם.';
+  $('foot').textContent = 'Every change is saved immediately and visible to everyone.';
   render();
   if (location.hash === '#tree') showWhole();
   if (location.hash === '#log' && IS_ADMIN) showLog();
@@ -998,7 +998,7 @@ async function boot(){
   const tryIn = async () => {
     if ($('go').disabled) return;
     if (!$('em').value.trim() || !$('pw').value){
-      $('loginMsg').innerHTML = '<div class="note err">צריך Whoיל וPassword.</div>';
+      $('loginMsg').innerHTML = '<div class="note err">Username and password are required.</div>';
       return;
     }
     busy(true);
