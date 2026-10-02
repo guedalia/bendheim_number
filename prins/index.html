@@ -310,8 +310,8 @@ function render(){
     } else h += '<div class="rel none">no direct blood relation</div>';
   }
   h += '<div class="btns">'
-     + (!ME ? '<button class="ghost" id="bMe">that's me</button>'
-            : ME === p.id ? '<button class="ghost" id="bNotMe">that's not me</button>' : '')
+     + (!ME ? '<button class="ghost" id="bMe">that’s me</button>'
+            : ME === p.id ? '<button class="ghost" id="bNotMe">that’s not me</button>' : '')
      + (owner ? '' : '<button class="big" id="bAdd">+ Add child</button>')
      + (owner || mate ? '' : '<button class="big" id="bSpouse">+ Add spouse</button>')
      + '<button class="ghost" id="bEdit">Edit</button>'
@@ -608,7 +608,7 @@ function relation(me, them){
   const myMate = partnerOf(me), theirMate = partnerOf(them);
   const a = myMate || me, b = theirMate || them;
   if (a.id === b.id){
-    if (me.id === them.id) return "that's me";
+    if (me.id === them.id) return "that’s me";
     return 'my ' + gendered(them, 'husband', 'wife');
   }
   const pa = pathIds(a), pb = pathIds(b);
@@ -948,7 +948,7 @@ async function load(){
     $('meBtn').textContent = m ? 'Me: ' + m.name : 'Who אני?';
     $('meBtn').onclick = () => {
       if (m){ CUR = m; location.hash = '#p' + m.id; showPerson(); render(); }
-      else alert('פתחו את הכרטיס שלכם בעץ ולחצו "that's me".');
+      else alert('פתחו את הכרטיס שלכם בעץ ולחצו "that’s me".');
     };
   };
   window.__setMeBtn = setMeBtn; setMeBtn();
