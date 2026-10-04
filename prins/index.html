@@ -1146,6 +1146,7 @@ async function load(){
     EDITMODE = $('editTgl').checked;
     try { localStorage.setItem(EDITKEY, EDITMODE ? '1' : '0'); } catch (e) {}
     if (!EDITMODE){ EDIT = null; ADD = false; }
+    $('foot').style.display = EDITMODE ? '' : 'none';
     render();
   };
   const setMeBtn = () => {
@@ -1185,6 +1186,7 @@ async function load(){
     $('pw1').value = ''; $('pw2').value = '';
   };
   $('foot').textContent = 'Every change is saved immediately and visible to everyone.';
+  $('foot').style.display = EDITMODE ? '' : 'none';        // only matters while editing
   render();
   if (location.hash === '#tree') showWhole();
   if (location.hash === '#log' && IS_ADMIN) showLog();
