@@ -237,6 +237,7 @@ let SPOUSE = new Map();
 const NUMBERED = false, NUM_PREFIX = 'T';
 let NUM = new Map(), BYNUM = new Map();
 // words the other-parent features add; the Prins build swaps this line for English
+const LBL_ALSO = 'שמות נוספים: ';
 const LBL = {parents: 'הורים: ', childrenWith: 'ילדים עם ', other: 'ההורה השני', unknown: 'לא ידוע', otherUnknown: 'ההורה השני לא רשום: '};
 
 function index(){
@@ -349,6 +350,8 @@ function render(){
   if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
   if (p.note) bits.push(esc(p.note));
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
+  const alsoNames = (p.alt || '').split(';').map(s => s.trim()).filter(Boolean);
+  if (alsoNames.length) h += '<div class="meta">' + LBL_ALSO + esc(alsoNames.join(' · ')) + '</div>';
   if (p.phone) h += '<div class="meta"><a class="tel" href="tel:'
     + esc(p.phone.replace(/[^+\d]/g, '')) + '">' + esc(p.phone) + '</a></div>';
   if (owner){
@@ -1032,16 +1035,30 @@ function counts(){
 
 // ---------- boot ----------
 async function load(){
-  const adm = await sb.from('tal_admins').select('email').eq('email', window.__email || '');
+  // Supabase returns at most 1000 rows per request. The admin check and every page go out together:
+  // one after another they took 3-4 s. How many pages to ask for is remembered from the last visit,
+  // and anything beyond that is fetched afterwards, so a tree that grew is still read in full.
+  const PAGE = 1000, HINT = 'pages_tal_people';
+  let hint = 3;
+  try { hint = Math.max(1, +localStorage.getItem(HINT) || 3); } catch (e) {}
+  const page = i => sb.from('tal_people').select('*', i === 0 ? {count: 'exact'} : {})
+                      .order('id').range(i * PAGE, i * PAGE + PAGE - 1);
+  const [adm, ...pages] = await Promise.all(
+    [sb.from('tal_admins').select('email').eq('email', window.__email || '')]
+      .concat(Array.from({length: hint}, (_, i) => page(i))));
   IS_ADMIN = !adm.error && (adm.data || []).length > 0;
-  // Supabase returns at most 1000 rows per request, so read the table in pages
+  let error = (pages.find(r => r.error) || {}).error || null;
   const data = [];
-  let error = null;
-  for (let from = 0; ; from += 1000){
-    const r = await sb.from('tal_people').select('*').order('id').range(from, from + 999);
-    if (r.error){ error = r.error; break; }
-    data.push(...r.data);
-    if (r.data.length < 1000) break;
+  if (!error){
+    pages.forEach(r => data.push(...r.data));
+    const total = pages[0].count;
+    for (let i = hint; total != null && data.length < total; i++){
+      const r = await page(i);
+      if (r.error){ error = r.error; break; }
+      if (!r.data.length) break;
+      data.push(...r.data);
+    }
+    try { localStorage.setItem(HINT, String(Math.max(1, Math.ceil((total || data.length) / PAGE)))); } catch (e) {}
   }
   if (error){ $('person').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
   PEOPLE = data; index(); counts();
