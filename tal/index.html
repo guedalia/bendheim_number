@@ -16,7 +16,37 @@ body{margin:0;font:16px/1.5 -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans
 header{border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 header h1{font-size:18px;margin:0;font-weight:600}
 header .sub{color:var(--dim);font-size:13px}
+header{position:relative}
 header .right{margin-inline-start:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+header .acct{display:contents}
+header .hsearch{position:relative}
+header .sbtn{display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;line-height:0}
+header .sbox{display:none;position:absolute;top:calc(100% + 8px);inset-inline-end:0;z-index:25;width:min(440px,calc(100vw - 28px));
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:10px}
+header .hsearch.open .sbox{display:block}
+header .hsearch.open .sbtn{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+header .sbox .hits{max-height:min(60vh,420px)}
+header .burger{display:none;font-size:19px;line-height:1;padding:7px 12px}
+.switch{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);margin:0 4px;cursor:pointer;user-select:none}
+.switch input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:11px;background:var(--line);
+  position:relative;margin:0;cursor:pointer;transition:background .15s;flex:none}
+.switch input:after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:inset-inline-start .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked:after{inset-inline-start:19px}
+.switch input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:600px){
+  header .burger{display:inline-block;position:absolute;top:10px;inset-inline-end:62px}
+  header .acct{display:none;position:absolute;top:100%;inset-inline-end:12px;z-index:20;background:var(--bg);
+    border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:10px;
+    flex-direction:column;align-items:stretch;gap:8px;min-width:200px}
+  header .acct.open{display:flex}
+  header .hsearch{position:absolute;top:10px;inset-inline-end:12px}
+  header .sbox{position:fixed;top:58px;inset-inline:12px;width:auto}
+  header > div:first-child{padding-inline-end:108px}
+  header .acct .sub{order:-1;padding:2px 4px 6px;border-bottom:1px solid var(--line);font-size:12.5px;overflow-wrap:anywhere}
+  header .acct button.ghost{width:100%;text-align:start}
+}
 main{padding:20px;max-width:760px;margin:0 auto}
 body.wide main{max-width:none}
 .card{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
@@ -128,7 +158,7 @@ ul.full .amp{color:var(--dim);font-weight:400;padding:0 2px}
 ul.full .g1>.n,ul.full .g1>.amp{font-size:19px}
 ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 @media print{
-  header .right,#pwCard,.card:has(#q),.btns,footer{display:none!important}
+  header .right,header .hsearch,#pwCard,.btns,footer{display:none!important}
   body{font-size:11pt}
   ul.full li{padding:1px 8px 1px 0}
 }
@@ -167,6 +197,13 @@ details.more{margin:2px 0 4px}details.more summary{cursor:pointer;color:var(--ac
     <div class="sub" id="counts"></div>
   </div>
   <div class="right" id="whoami"></div>
+  <div class="hsearch" id="hsearch" style="display:none">
+    <button class="ghost sbtn" id="sBtn" aria-label="חיפוש" aria-expanded="false" aria-controls="sbox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
+    <div class="sbox" id="sbox">
+      <input type="text" id="q" placeholder="שם..." aria-label="חיפוש" autocomplete="off">
+      <div id="hits"></div>
+    </div>
+  </div>
 </header>
 
 <main>
@@ -201,11 +238,6 @@ details.more{margin:2px 0 4px}details.more summary{cursor:pointer;color:var(--ac
       <div id="pwMsg"></div>
       <div class="note info">הסיסמה משותפת לכולם. אחרי השינוי צריך למסור אותה שוב לכל מי שעורך.</div>
     </div>
-    <div class="card">
-      <label for="q">חיפוש</label>
-      <input type="text" id="q" placeholder="שם...">
-      <div id="hits"></div>
-    </div>
     <div id="person"></div>
     <div id="whole" style="display:none"></div>
     <div id="logv" style="display:none"></div>
@@ -236,10 +268,15 @@ let IS_ADMIN = false;
 // so they can carry their own surname, birth name and dates. Children still hang off the
 // family member, so a spouse never appears in the list of children.
 let SPOUSE = new Map();
-// family numbers: root is <prefix>1, its third child <prefix>1.3, a spouse <number>S (S1, S2 ... when
-// there is more than one). Worked out from the tree order every time it is indexed.
+// family numbers: the head of the tree has none; his children are <prefix>1, <prefix>2 ..., the third child
+// of <prefix>2 is <prefix>2.3, a spouse <number>S (S1, S2 ... when there is more than one). Worked out from
+// the tree order every time it is indexed.
 const NUMBERED = false, NUM_PREFIX = 'T';
 let NUM = new Map(), BYNUM = new Map();
+// editing controls stay hidden until the viewer turns on edit mode; remembered per viewer and per tree
+const EDITKEY = 'editmode_' + NUM_PREFIX;
+let EDITMODE = false;
+try { EDITMODE = localStorage.getItem(EDITKEY) === '1'; } catch (e) {}
 // words the other-parent features add; the Prins build swaps this line for English
 const LBL_MORE = 'פרטים נוספים ▾';
 const LBL_ALSO = 'שמות נוספים: ';
@@ -301,13 +338,21 @@ function numbers(){
   if (!NUMBERED) return;
   const r = (KIDS.get('root') || [])[0];
   if (!r) return;
-  (function walk(p, n){
+  const walk = (p, n) => {
     NUM.set(p.id, n);
     const sp = SPOUSE.get(p.id) || [];
     sp.forEach((s, i) => NUM.set(s.id, n + 'S' + (sp.length > 1 ? (i + 1) : '')));
     (KIDS.get(p.id) || []).forEach((k, i) => walk(k, n + '.' + (i + 1)));
-  })(r, NUM_PREFIX + '1');
+  };
+  (KIDS.get(r.id) || []).forEach((k, i) => walk(k, NUM_PREFIX + (i + 1)));
   NUM.forEach((n, id) => BYNUM.set(n.toUpperCase(), id));
+}
+// a number from a link: the current scheme first, then the earlier one that started with the head as 1
+function byNum(s){
+  const u = String(s || '').toUpperCase();
+  if (BYNUM.has(u)) return BYNUM.get(u);
+  const old = u.match(new RegExp('^' + NUM_PREFIX + '1\\.(\\d.*)$'));
+  return old ? BYNUM.get(NUM_PREFIX + old[1]) : undefined;
 }
 const kidsOf = p => KIDS.get(p == null ? 'root' : p.id) || [];
 const spouseOf = p => (p && p.spouse_of == null) ? ((SPOUSE.get(p.id) || [])[0] || null) : null;
@@ -403,10 +448,10 @@ function render(){
   h += '<div class="btns">'
      + (!ME ? '<button class="ghost" id="bMe">זה אני</button>'
             : ME === p.id ? '<button class="ghost" id="bNotMe">זה לא אני</button>' : '')
-     + (owner ? '' : '<button class="big" id="bAdd">+ הוסף ילד</button>')
-     + (owner ? '' : '<button class="big" id="bSpouse">+ הוסף בן/בת זוג</button>')
-     + '<button class="ghost" id="bEdit">ערוך</button>'
-     + ((owner || (p.parent_id != null && kids.length === 0)) ? '<button class="danger" id="bDel">מחק</button>' : '')
+     + (owner || !EDITMODE ? '' : '<button class="big" id="bAdd">+ הוסף ילד</button>')
+     + (owner || !EDITMODE ? '' : '<button class="big" id="bSpouse">+ הוסף בן/בת זוג</button>')
+     + (EDITMODE ? '<button class="ghost" id="bEdit">ערוך</button>' : '')
+     + (EDITMODE && (owner || (p.parent_id != null && kids.length === 0)) ? '<button class="danger" id="bDel">מחק</button>' : '')
      + '</div>';
   h += '</div>';
 
@@ -418,17 +463,17 @@ function render(){
 
   h += '<h3>הילדים</h3>';
   if (!kids.length){
-    h += '<div class="empty">אין ילדים רשומים. אפשר להוסיף.</div>';
+    h += '<div class="empty">' + (EDITMODE ? 'אין ילדים רשומים. אפשר להוסיף.' : 'אין ילדים רשומים.') + '</div>';
   } else {
     h += '<div class="kids">';
     kids.forEach((k, i) => {
       const n = kidsOf(k).length;
       h += '<div class="kid" data-id="' + k.id + '">'
-         + '<span class="grip" title="גרור כדי לשנות סדר">⠿</span>'
+         + (EDITMODE ? '<span class="grip" title="גרור כדי לשנות סדר">⠿</span>'
          + '<span class="ord">'
          + '<button class="tiny" data-mv="' + k.id + '" data-d="-1"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
          + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
-         + '</span>'
+         + '</span>' : '')
          + '<span class="nm" data-go="' + k.id + '">' + numTag(k.id, 'numk') + esc(fullName(k))
          + (k.deceased ? ' <span class="dead">ז״ל</span>' : '')
  + '</span>'
@@ -1020,7 +1065,7 @@ function search(){
     : '<div class="empty">לא נמצא.</div>';
   document.querySelectorAll('#hits [data-go]').forEach(b => b.onclick = () => {
     CUR = BYID.get(+b.dataset.go); EDIT = null; ADD = false;
-    $('q').value = ''; $('hits').innerHTML = '';
+    $('q').value = ''; $('hits').innerHTML = ''; openSearch(false);
     location.hash = '#p' + CUR.id; render();
   });
 }
@@ -1074,16 +1119,31 @@ async function load(){
     $('person').innerHTML = '<div class="note err">' + esc(error.message) + '</div>'; return; }
   PEOPLE = data; index(); counts();
   const h = location.hash.match(/^#p(\d+)$/), hn = location.hash.match(/^#([a-z]\d[\d.]*(s\d*)?)$/i);
-  CUR = h ? (BYID.get(+h[1]) || root()) : hn ? (BYID.get(BYNUM.get(hn[1].toUpperCase())) || root()) : root();
+  CUR = h ? (BYID.get(+h[1]) || root()) : hn ? (BYID.get(byNum(hn[1])) || root()) : root();
   $('login').style.display = 'none';
   $('loading').style.display = 'none';
   $('app').style.display = '';
+  $('hsearch').style.display = '';
   $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
     + ' <button class="ghost" id="treeBtn">כל העץ</button>'
-    + (IS_ADMIN ? ' <button class="ghost" id="logBtn">יומן</button>' : '')
+    + ' <label class="switch"><input type="checkbox" id="editTgl"' + (EDITMODE ? ' checked' : '') + '><span>מצב עריכה</span></label>'
+    + ' <button class="ghost burger" id="burger" aria-label="תפריט" aria-expanded="false" aria-controls="acct">☰</button>'
+    + ' <div class="acct" id="acct">'
+    + (IS_ADMIN ? '<button class="ghost" id="logBtn">יומן</button>' : '')
     + ' <span class="sub">' + esc(window.__email || '') + '</span>'
     + ' <button class="ghost" id="pwBtn">סיסמה</button>'
-    + ' <button class="ghost" id="out">יציאה</button>';
+    + ' <button class="ghost" id="out">יציאה</button>'
+    + '</div>';
+  const menu = open => { $('acct').classList.toggle('open', open); $('burger').setAttribute('aria-expanded', open ? 'true' : 'false'); };
+  $('burger').onclick = e => { e.stopPropagation(); menu(!$('acct').classList.contains('open')); };
+  $('acct').onclick = e => { if (e.target.closest('button')) menu(false); };
+  document.addEventListener('click', e => { if (!e.target.closest('#acct,#burger')) menu(false); });
+  $('editTgl').onchange = () => {
+    EDITMODE = $('editTgl').checked;
+    try { localStorage.setItem(EDITKEY, EDITMODE ? '1' : '0'); } catch (e) {}
+    if (!EDITMODE){ EDIT = null; ADD = false; }
+    render();
+  };
   const setMeBtn = () => {
     const m = ME && BYID.get(ME);
     $('meBtn').textContent = m ? 'אני: ' + m.name : 'מי אני?';
@@ -1164,14 +1224,22 @@ async function boot(){
 }
 
 $('q').oninput = search;
+function openSearch(open){
+  $('hsearch').classList.toggle('open', open);
+  $('sBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) setTimeout(() => $('q').focus(), 0);
+}
+$('sBtn').onclick = e => { e.stopPropagation(); openSearch(!$('hsearch').classList.contains('open')); };
+$('q').onkeydown = e => { if (e.key === 'Escape'){ openSearch(false); $('sBtn').focus(); } };
+document.addEventListener('click', e => { if (!e.target.closest('#hsearch')) openSearch(false); });
 addEventListener('hashchange', () => {
   if (!BYID.size) return;
   if (location.hash === '#tree'){ showWhole(); return; }
   if (location.hash === '#log'){ if (IS_ADMIN) showLog(); return; }
   const h = location.hash.match(/^#p(\d+)$/), hn = location.hash.match(/^#([a-z]\d[\d.]*(s\d*)?)$/i);
   if (h){ CUR = BYID.get(+h[1]) || CUR; EDIT = null; ADD = false; showPerson(); render(); }
-  else if (hn && BYNUM.has(hn[1].toUpperCase())){
-    CUR = BYID.get(BYNUM.get(hn[1].toUpperCase())); EDIT = null; ADD = false; showPerson(); render();
+  else if (hn && byNum(hn[1]) != null){
+    CUR = BYID.get(byNum(hn[1])); EDIT = null; ADD = false; showPerson(); render();
   }
 });
 boot();
