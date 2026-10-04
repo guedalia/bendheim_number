@@ -347,6 +347,8 @@ function render(){
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
   if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
+  if (p.place) bits.push(esc(p.place));
+  if (p.occupation) bits.push(esc(p.occupation));
   if (p.note) bits.push(esc(p.note));
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
   const alsoNames = (p.alt || '').split(';').map(s => s.trim()).filter(Boolean);
