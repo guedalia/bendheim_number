@@ -337,12 +337,12 @@ function numbers(){
   if (!NUMBERED) return;
   const r = (KIDS.get('root') || [])[0];
   if (!r) return;
-  (function walk(p, n){
+  const walk = (p, n) => {
     NUM.set(p.id, n);
     const sp = SPOUSE.get(p.id) || [];
     sp.forEach((s, i) => NUM.set(s.id, n + 'S' + (sp.length > 1 ? (i + 1) : '')));
     (KIDS.get(p.id) || []).forEach((k, i) => walk(k, n + '.' + (i + 1)));
-  });
+  };
   (KIDS.get(r.id) || []).forEach((k, i) => walk(k, NUM_PREFIX + (i + 1)));
   NUM.forEach((n, id) => BYNUM.set(n.toUpperCase(), id));
 }
