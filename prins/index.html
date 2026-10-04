@@ -153,6 +153,7 @@ ul.full .g2>.n,ul.full .g2>.amp{font-size:17px}
 .num{font:600 12.5px/1.3 ui-monospace,Consolas,monospace;opacity:.6;letter-spacing:.02em;margin-bottom:2px;direction:ltr;text-align:start}
 .numk{font:600 11.5px ui-monospace,Consolas,monospace;opacity:.55;margin-inline-end:5px;direction:ltr;unicode-bidi:isolate}
 #fOther{width:100%;font:inherit;padding:9px 10px;border-radius:10px;border:1px solid rgba(127,127,127,.45);background:transparent;color:inherit}
+details.more{margin:2px 0 4px}details.more summary{cursor:pointer;color:var(--accent);font-size:14px;list-style:none;display:inline-block;padding:2px 0}details.more summary::-webkit-details-marker{display:none}details.more[open] summary{opacity:.75}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 </head>
@@ -236,6 +237,7 @@ let SPOUSE = new Map();
 // there is more than one). Worked out from the tree order every time it is indexed.
 const NUMBERED = true, NUM_PREFIX = 'P';
 let NUM = new Map(), BYNUM = new Map();
+const LBL_MORE = 'More details ▾';
 const LBL_ALSO = 'Also known as: ';
 const LBL = {parents: 'Parents: ', childrenWith: 'Children with ', other: 'Other parent', unknown: 'not recorded', otherUnknown: 'other parent not recorded: '};
 
@@ -347,10 +349,13 @@ function render(){
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
   if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
-  if (p.place) bits.push(esc(p.place));
-  if (p.occupation) bits.push(esc(p.occupation));
-  if (p.note) bits.push(esc(p.note));
+  // place, occupation and note can run to a paragraph: short ones stay on the line, longer ones fold away
+  const more = [p.place, p.occupation, p.note].filter(Boolean).map(esc);
+  const moreLen = [p.place, p.occupation, p.note].filter(Boolean).join(' · ').length;
+  if (more.length && moreLen <= 80) bits.push(...more);
   if (bits.length) h += '<div class="meta">' + bits.join(' · ') + '</div>';
+  if (more.length && moreLen > 80)
+    h += '<details class="more"><summary>' + LBL_MORE + '</summary><div class="meta">' + more.join(' · ') + '</div></details>';
   const alsoNames = (p.alt || '').split(';').map(s => s.trim()).filter(Boolean);
   if (alsoNames.length) h += '<div class="meta">' + LBL_ALSO + esc(alsoNames.join(' · ')) + '</div>';
   if (p.phone) h += '<div class="meta"><a class="tel" href="tel:'
