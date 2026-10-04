@@ -263,10 +263,6 @@ let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, AD
 let PICKSEX = '';
 let SHOWCHAIN = false;
 let IS_ADMIN = false;
-// editing controls stay hidden until the viewer turns on edit mode; remembered per viewer and per tree
-const EDITKEY = 'editmode_' + NUM_PREFIX;
-let EDITMODE = false;
-try { EDITMODE = localStorage.getItem(EDITKEY) === '1'; } catch (e) {}
 
 // A spouse is a person in their own right, attached through spouse_of rather than parent_id,
 // so they can carry their own surname, birth name and dates. Children still hang off the
@@ -277,6 +273,10 @@ let SPOUSE = new Map();
 // the tree order every time it is indexed.
 const NUMBERED = true, NUM_PREFIX = 'P';
 let NUM = new Map(), BYNUM = new Map();
+// editing controls stay hidden until the viewer turns on edit mode; remembered per viewer and per tree
+const EDITKEY = 'editmode_' + NUM_PREFIX;
+let EDITMODE = false;
+try { EDITMODE = localStorage.getItem(EDITKEY) === '1'; } catch (e) {}
 const LBL_MORE = 'More details ▾';
 const LBL_ALSO = 'Also known as: ';
 const LBL = {parents: 'Parents: ', childrenWith: 'Children with ', other: 'Other parent', unknown: 'not recorded', otherUnknown: 'other parent not recorded: '};
