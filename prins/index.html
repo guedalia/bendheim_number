@@ -393,7 +393,7 @@ function render(){
   let h = '<div class="card">';
   if (crumb) h += '<div class="crumb">' + crumb + ' ‹</div>';
   if (NUM.get(p.id)) h += '<div class="num">' + esc(NUM.get(p.id)) + '</div>';
-  h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">z"l</span>' : '') + '</div>';
+  h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? '' : '') + '</div>';
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
   if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
@@ -413,7 +413,7 @@ function render(){
        + esc(fullName(owner)) + '</button></div>';
   } else if (mate){
     h += '<div class="meta">married to ' + spousesOf(p).map(m => '<button class="link" data-go="' + m.id + '">'
-       + esc(fullName(m)) + '</button>' + (m.deceased ? ' <span class="dead">z"l</span>' : '')).join(', ')
+       + esc(fullName(m)) + '</button>' + (m.deceased ? '' : '')).join(', ')
        + '</div>';
   }
   if (!owner && p.parent_id != null && p.other_parent_id != null && BYID.get(p.other_parent_id) && BYID.get(p.parent_id)){
@@ -474,7 +474,7 @@ function render(){
          + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
          + '</span>' : '')
          + '<span class="nm" data-go="' + k.id + '">' + numTag(k.id, 'numk') + esc(fullName(k))
-         + (k.deceased ? ' <span class="dead">z"l</span>' : '')
+         + (k.deceased ? '' : '')
  + '</span>'
          + otherTag(p, k)
          + '<span class="ct">' + (n ? n + ' children' : '') + '</span>'
@@ -941,12 +941,12 @@ function renderWhole(){
     return '<li class="g' + depth + '">'
       + numTag(p.id, 'numk')
       + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
-      + (p.deceased ? ' <span class="dead">z"l</span>' : '')
+      + (p.deceased ? '' : '')
       + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
           + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
       + spousesOf(p).map(m => ' <span class="amp">+</span> '
              + '<span class="n" data-go="' + m.id + '">' + esc(fullName(m)) + '</span>'
-             + (m.deceased ? ' <span class="dead">z"l</span>' : '')
+             + (m.deceased ? '' : '')
              + (m.born || m.died ? ' <span class="sp">(' + esc(m.born || '')
                  + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '')).join('')
       + kidsHtml(p, depth + 1) + '</li>';
