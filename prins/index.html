@@ -1106,6 +1106,7 @@ async function load(){
     [sb.from('prins_admins').select('email').eq('email', window.__email || '')]
       .concat(Array.from({length: hint}, (_, i) => page(i))));
   IS_ADMIN = !adm.error && (adm.data || []).length > 0;
+  if (!IS_ADMIN) EDITMODE = false;          // only admins get the edit switch and the editing controls
   let error = (pages.find(r => r.error) || {}).error || null;
   const data = [];
   if (!error){
@@ -1130,7 +1131,7 @@ async function load(){
   $('hsearch').style.display = '';
   $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
     + ' <button class="ghost" id="treeBtn">Whole tree</button>'
-    + ' <label class="switch"><input type="checkbox" id="editTgl"' + (EDITMODE ? ' checked' : '') + '><span>Edit mode</span></label>'
+    + (IS_ADMIN ? ' <label class="switch"><input type="checkbox" id="editTgl"' + (EDITMODE ? ' checked' : '') + '><span>Edit mode</span></label>' : '')
     + ' <button class="ghost burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="acct">☰</button>'
     + ' <div class="acct" id="acct">'
     + (IS_ADMIN ? '<button class="ghost" id="logBtn">Log</button>' : '')
@@ -1142,7 +1143,7 @@ async function load(){
   $('burger').onclick = e => { e.stopPropagation(); menu(!$('acct').classList.contains('open')); };
   $('acct').onclick = e => { if (e.target.closest('button')) menu(false); };
   document.addEventListener('click', e => { if (!e.target.closest('#acct,#burger')) menu(false); });
-  $('editTgl').onchange = () => {
+  if ($('editTgl')) $('editTgl').onchange = () => {
     EDITMODE = $('editTgl').checked;
     try { localStorage.setItem(EDITKEY, EDITMODE ? '1' : '0'); } catch (e) {}
     if (!EDITMODE){ EDIT = null; ADD = false; }
