@@ -73,6 +73,7 @@ button.link{background:none;border:0;color:var(--accent);text-decoration:underli
 .btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
 .who{font-size:24px;font-weight:700;line-height:1.25}
 .meta{color:var(--dim);font-size:14px;margin-top:3px}
+.mdate{color:var(--dim);font-size:13px;white-space:nowrap}
 .crumb{font-size:13px;color:var(--dim);margin-bottom:10px;word-break:break-word}
 .crumb button{font-size:13px}
 h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spacing:.04em}
@@ -411,10 +412,10 @@ function render(){
     + esc(p.phone.replace(/[^+\d]/g, '')) + '">' + esc(p.phone) + '</a></div>';
   if (owner){
     h += '<div class="meta">spouse of <button class="link" data-go="' + owner.id + '">'
-       + esc(fullName(owner)) + '</button></div>';
+       + esc(fullName(owner)) + '</button>' + (p.married ? ' <span class="mdate">⚭ ' + esc(p.married) + '</span>' : '') + '</div>';
   } else if (mate){
     h += '<div class="meta">married to ' + spousesOf(p).map(m => '<button class="link" data-go="' + m.id + '">'
-       + esc(fullName(m)) + '</button>' + (m.deceased ? '' : '')).join(', ')
+       + esc(fullName(m)) + '</button>' + (m.deceased ? '' : '') + (m.married ? ' <span class="mdate">⚭ ' + esc(m.married) + '</span>' : '')).join(', ')
        + '</div>';
   }
   if (!owner && p.parent_id != null && p.other_parent_id != null && BYID.get(p.other_parent_id) && BYID.get(p.parent_id)){
@@ -498,6 +499,8 @@ function form(p, isNew){
    + '<div><label>Phone</label><input type="text" id="fPhone" value="' + v('phone') + '" inputmode="tel"></div>'
    + '<div><label>Year / date of birth</label><input type="text" id="fBorn" value="' + v('born') + '" placeholder="1950 or 25.1.1950"></div>'
    + '<div><label>Date of death</label><input type="text" id="fDied" value="' + v('died') + '"></div>'
+   + ((isNew === 'spouse' || (!isNew && p.spouse_of != null))
+       ? '<div><label>Marriage date</label><input type="text" id="fMar" value="' + v('married') + '"></div>' : '')
    + '<div><label>Hebrew name</label><input type="text" id="fEn" value="' + v('name_en') + '"></div>'
    + '<div><label>Note</label><input type="text" id="fNote" value="' + v('note') + '"></div>'
    + otherParentField(p)
@@ -558,6 +561,7 @@ async function save(){
   };
   if ($('fOther')) row.other_parent_id = $('fOther').value ? +$('fOther').value : null;
   if ($('fDiv')) row.divorced = $('fDiv').checked;
+  if ($('fMar')) row.married = $('fMar').value.trim();
   const wasSurname = (ADD ? '' : (CUR.surname || '')).trim();
   if (!row.name){ $('formMsg').innerHTML = '<div class="note err">A first name is required.</div>'; return; }
   $('fSave').disabled = true;
@@ -952,7 +956,8 @@ function renderWhole(){
              + '<span class="n" data-go="' + m.id + '">' + esc(fullName(m)) + '</span>'
              + (m.deceased ? '' : '')
              + (m.born || m.died ? ' <span class="sp">(' + esc(m.born || '')
-                 + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '')).join('')
+                 + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '')
+             + (m.married ? ' <span class="sp">⚭ ' + esc(m.married) + '</span>' : '')).join('')
       + kidsHtml(p, depth + 1) + '</li>';
   };
   const kidsHtml = (p, depth) => {
