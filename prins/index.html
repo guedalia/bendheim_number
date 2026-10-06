@@ -1145,7 +1145,7 @@ async function load(){
     + ' <div class="acct" id="acct">'
     + (IS_ADMIN ? '<button class="ghost" id="logBtn">Log</button>' : '')
     + ' <span class="sub">' + esc(window.__email || '') + '</span>'
-    + ' <button class="ghost" id="pwBtn">Password</button>'
+    + (IS_ADMIN ? ' <button class="ghost" id="pwBtn">Password</button>' : '')   // the shared password is changed by admins only
     + ' <button class="ghost" id="out">Sign out</button>'
     + '</div>';
   const menu = open => { $('acct').classList.toggle('open', open); $('burger').setAttribute('aria-expanded', open ? 'true' : 'false'); };
@@ -1177,7 +1177,7 @@ async function load(){
     else { location.hash = CUR ? '#p' + CUR.id : ''; showPerson(); }
   };
   $('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
-  $('pwBtn').onclick = () => {
+  if ($('pwBtn')) $('pwBtn').onclick = () => {
     $('pwCard').style.display = ''; $('pwMsg').innerHTML = '';
     $('pw1').value = ''; $('pw2').value = ''; $('pw1').focus();
   };
