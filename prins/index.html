@@ -264,7 +264,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
 let PEOPLE = [], BYID = new Map(), KIDS = new Map(), CUR = null, EDIT = null, ADD = false;
 let PICKSEX = '';
 let SHOWCHAIN = false;
-let IS_ADMIN = false;
+let IS_ADMIN = false, IS_EDITOR = false;   // editor: may edit the tree, but no log or password
 
 // A spouse is a person in their own right, attached through spouse_of rather than parent_id,
 // so they can carry their own surname, birth name and dates. Children still hang off the
@@ -1111,11 +1111,13 @@ async function load(){
   try { hint = Math.max(1, +localStorage.getItem(HINT) || 3); } catch (e) {}
   const page = i => sb.from('prins_people').select('*', i === 0 ? {count: 'exact'} : {})
                       .order('id').range(i * PAGE, i * PAGE + PAGE - 1);
-  const [adm, ...pages] = await Promise.all(
-    [sb.from('prins_admins').select('email').eq('email', window.__email || '')]
+  const [adm, edt, ...pages] = await Promise.all(
+    [sb.from('prins_admins').select('email').eq('email', window.__email || ''),
+     sb.from('prins_editors').select('email').eq('email', window.__email || '')]
       .concat(Array.from({length: hint}, (_, i) => page(i))));
   IS_ADMIN = !adm.error && (adm.data || []).length > 0;
-  if (!IS_ADMIN) EDITMODE = false;          // only admins get the edit switch and the editing controls
+  IS_EDITOR = IS_ADMIN || (!edt.error && (edt.data || []).length > 0);
+  if (!IS_EDITOR) EDITMODE = false;         // only admins and editors get the edit switch and the editing controls
   let error = (pages.find(r => r.error) || {}).error || null;
   const data = [];
   if (!error){
@@ -1140,7 +1142,7 @@ async function load(){
   $('hsearch').style.display = '';
   $('whoami').innerHTML = '<button class="ghost" id="meBtn"></button>'
     + ' <button class="ghost" id="treeBtn">Whole tree</button>'
-    + (IS_ADMIN ? ' <label class="switch"><input type="checkbox" id="editTgl"' + (EDITMODE ? ' checked' : '') + '><span>Edit mode</span></label>' : '')
+    + (IS_EDITOR ? ' <label class="switch"><input type="checkbox" id="editTgl"' + (EDITMODE ? ' checked' : '') + '><span>Edit mode</span></label>' : '')
     + ' <button class="ghost burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="acct">☰</button>'
     + ' <div class="acct" id="acct">'
     + (IS_ADMIN ? '<button class="ghost" id="logBtn">Log</button>' : '')
