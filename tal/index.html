@@ -1142,7 +1142,7 @@ async function load(){
     + ' <button class="ghost burger" id="burger" aria-label="תפריט" aria-expanded="false" aria-controls="acct">☰</button>'
     + ' <div class="acct" id="acct">'
     + (IS_ADMIN ? '<button class="ghost" id="logBtn">יומן</button>' : '')
-    + ' <span class="sub">' + esc(window.__email || '') + '</span>'
+    + ' <span class="sub">' + esc((window.__email || '').replace('@' + LOGIN_DOMAIN, '')) + '</span>'
     + (IS_ADMIN ? ' <button class="ghost" id="pwBtn">סיסמה</button>' : '')   // the shared password is changed by admins only
     + ' <button class="ghost" id="out">יציאה</button>'
     + '</div>';
