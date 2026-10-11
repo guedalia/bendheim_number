@@ -273,7 +273,7 @@ let SPOUSE = new Map();
 // family numbers: the head of the tree has none; his children are <prefix>1, <prefix>2 ..., the third child
 // of <prefix>2 is <prefix>2.3, a spouse <number>S (S1, S2 ... when there is more than one). Worked out from
 // the tree order every time it is indexed.
-const NUMBERED = false, NUM_PREFIX = 'T';
+const NUMBERED = true, NUM_PREFIX = 'T';
 let NUM = new Map(), BYNUM = new Map();
 // editing controls stay hidden until the viewer turns on edit mode; remembered per viewer and per tree
 const EDITKEY = 'editmode_' + NUM_PREFIX;
@@ -396,7 +396,7 @@ function render(){
   let h = '<div class="card">';
   if (crumb) h += '<div class="crumb">' + crumb + ' ‹</div>';
   if (NUM.get(p.id)) h += '<div class="num">' + esc(NUM.get(p.id)) + '</div>';
-  h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? ' <span class="dead">ז״ל</span>' : '') + '</div>';
+  h += '<div class="who">' + esc(fullName(p)) + (p.deceased ? '' : '') + '</div>';
   const bits = [];
   if (p.name_en) bits.push(esc(p.name_en));
   if (p.born || p.died) bits.push(esc(p.born || '') + (p.died ? ' – ' + esc(p.died) : ''));
@@ -416,7 +416,7 @@ function render(){
        + esc(fullName(owner)) + '</button>' + (p.married ? ' <span class="mdate">⚭ ' + esc(p.married) + '</span>' : '') + '</div>';
   } else if (mate){
     h += '<div class="meta">נשוי/אה ל' + spousesOf(p).map(m => '<button class="link" data-go="' + m.id + '">'
-       + esc(fullName(m)) + '</button>' + (m.deceased ? ' <span class="dead">ז״ל</span>' : '') + (m.married ? ' <span class="mdate">⚭ ' + esc(m.married) + '</span>' : '')).join(', ')
+       + esc(fullName(m)) + '</button>' + (m.deceased ? '' : '') + (m.married ? ' <span class="mdate">⚭ ' + esc(m.married) + '</span>' : '')).join(', ')
        + '</div>';
   }
   if (!owner && p.parent_id != null && p.other_parent_id != null && BYID.get(p.other_parent_id) && BYID.get(p.parent_id)){
@@ -477,7 +477,7 @@ function render(){
          + '<button class="tiny" data-mv="' + k.id + '" data-d="1"' + (i === kids.length - 1 ? ' disabled' : '') + '>↓</button>'
          + '</span>' : '')
          + '<span class="nm" data-go="' + k.id + '">' + numTag(k.id, 'numk') + esc(fullName(k))
-         + (k.deceased ? ' <span class="dead">ז״ל</span>' : '')
+         + (k.deceased ? '' : '')
  + '</span>'
          + otherTag(p, k)
          + '<span class="ct">' + (n ? n + ' ילדים' : '') + '</span>'
@@ -511,7 +511,7 @@ function form(p, isNew){
    + '<button type="button" class="sx' + (p.sex === 'M' ? ' on' : '') + '" data-sx="M">בן</button>'
    + '<button type="button" class="sx' + (p.sex === 'F' ? ' on' : '') + '" data-sx="F">בת</button>'
    + '</span></div>'
-   + '<label style="margin-top:4px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה (ז״ל)</label>'
+   + '<label style="margin-top:4px"><input type="checkbox" id="fDead"' + (p.deceased ? ' checked' : '') + '> נפטר/ה</label>'
    + ((isNew === 'spouse' || (!isNew && p.spouse_of != null))
        ? '<label style="margin-top:4px"><input type="checkbox" id="fDiv"' + (p.divorced ? ' checked' : '') + '> גרוש/ה</label>' : '')
    + '<div class="btns"><button class="big" id="fSave">שמירה</button>'
@@ -945,12 +945,12 @@ function renderWhole(){
     return '<li class="g' + depth + '">'
       + numTag(p.id, 'numk')
       + '<span class="n" data-go="' + p.id + '">' + esc(fullName(p)) + '</span>'
-      + (p.deceased ? ' <span class="dead">ז״ל</span>' : '')
+      + (p.deceased ? '' : '')
       + (p.born || p.died ? ' <span class="sp">(' + esc(p.born || '')
           + (p.died ? '–' + esc(p.died) : '') + ')</span>' : '')
       + spousesOf(p).map(m => (m.divorced ? ' <span class="amp divx" title="גרוש/ה">✕</span> ' : ' <span class="amp">+</span> ')
              + '<span class="n" data-go="' + m.id + '">' + esc(fullName(m)) + '</span>'
-             + (m.deceased ? ' <span class="dead">ז״ל</span>' : '')
+             + (m.deceased ? '' : '')
              + (m.born || m.died ? ' <span class="sp">(' + esc(m.born || '')
                  + (m.died ? '–' + esc(m.died) : '') + ')</span>' : '')
              + (m.married ? ' <span class="sp">⚭ ' + esc(m.married) + '</span>' : '')).join('')
