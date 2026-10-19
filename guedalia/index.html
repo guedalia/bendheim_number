@@ -95,6 +95,15 @@ h3{font-size:12px;margin:18px 0 8px;font-weight:600;color:var(--dim);letter-spac
 .diag text.l{font-size:10.5px;fill:var(--accent);font-weight:600}
 .diag text.n{font-size:13px;font-weight:600}
 .diag text.y{font-size:11px;fill:var(--dim)}
+.lin{display:flex;flex-direction:column;align-items:center}
+.lbx{width:100%;max-width:340px;border:1.5px solid var(--line);border-radius:8px;background:#fff;padding:6px 10px;text-align:center;cursor:pointer}
+.lbx .l{font-size:12px;color:var(--accent);font-weight:600}
+.lbx .n{font-size:14.5px;font-weight:600}
+.lbx .y{font-size:12px;color:var(--dim)}
+.lbx.me{background:var(--good);border-color:var(--good-line)}
+.lbx.them{background:var(--accent-soft);border-color:var(--accent)}
+.lbx.anc{background:var(--anc);border-color:var(--anc-line)}
+.lj{width:2px;height:14px;background:#c2c2bd}
 .hop{text-align:center;font-size:13.5px;color:var(--dim);margin:6px 0;padding:6px;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line)}
 .hop b{color:var(--ink)}
 .hits{max-height:min(60vh,440px);overflow:auto;margin-top:8px}
@@ -352,7 +361,7 @@ const shortRel = id => { if (!ME || !P.has(ME)) return ''; if (id === ME) return
 
 // ---------- the picture: each blood stretch as a small tree, the shared ancestor on top ----------
 function segSvg(s, meId, themId, labelOf){
-  const W = 158, H = 60, GAP = 18, ROW = 82;
+  const W = 184, H = 60, GAP = 18, ROW = 82;
   const top = s.ids[s.a];
   const left = s.ids.slice(0, s.a).reverse();          // just below the ancestor ... down to the start
   const right = s.ids.slice(s.a + 1);                   // just below the ancestor ... down to the end
@@ -364,7 +373,7 @@ function segSvg(s, meId, themId, labelOf){
   const box = (x, y, id, cls, w, label, line1, line2) =>
     '<g class="bx' + cls + '" data-go="' + esc(id) + '" transform="translate(' + x + ',' + y + ')">'
     + '<rect width="' + w + '" height="' + H + '" rx="8"/>'
-    + '<text class="l" x="' + w / 2 + '" y="15">' + esc(cut(label, Math.round(w / 6.2))) + '</text>'
+    + '<text class="l" x="' + w / 2 + '" y="15">' + esc(cut(label, Math.round(w / 5.6))) + '</text>'
     + '<text class="n" x="' + w / 2 + '" y="34">' + esc(cut(line1, Math.round(w / 7.6))) + '</text>'
     + '<text class="y" x="' + w / 2 + '" y="50">' + esc(cut(line2, Math.round(w / 6.4))) + '</text></g>';
   const cls = id => id === meId ? ' me' : id === themId ? ' them' : '';
@@ -393,6 +402,25 @@ function segSvg(s, meId, themId, labelOf){
   return '<svg viewBox="-4 -4 ' + (width + 8) + ' ' + (hgt + 8) + '" width="' + (width + 8) + '">' + g + '</svg>';
 }
 
+// on a phone the two-sided tree would shrink below reading size, so the same route is drawn as one column:
+// up from me to the shared ancestor, then down to them
+const NARROW = matchMedia('(max-width: 560px)');
+NARROW.addEventListener('change', () => { if (P.size) show(); });
+function segList(s, meId, themId, labelOf){
+  const top = s.ids[s.a], cp = s.couple && P.get(s.couple), isAnc = s.a >= 1 && s.b >= 1;
+  const card = (id, cls, label, name, yrs) => '<div class="lbx' + cls + '" data-go="' + esc(id) + '">'
+    + (label ? '<div class="l">' + esc(label) + '</div>' : '') + '<div class="n">' + esc(name) + '</div>'
+    + (yrs ? '<div class="y">' + esc(yrs) + '</div>' : '') + '</div>';
+  const cls = id => id === meId ? ' me' : id === themId ? ' them' : '';
+  const out = s.ids.map((id, k) => {
+    const p = P.get(id);
+    if (id === top && cp) return card(id, ' anc', labelOf(id, 'top'), p.name + ' & ' + cp.name, [years(p), years(cp)].filter(Boolean).join(' · '));
+    if (id === top) return card(id, isAnc ? ' anc' : cls(id), labelOf(id, 'top'), p.name, years(p));
+    return card(id, cls(id), labelOf(id), p.name, years(p));
+  });
+  return '<div class="lin">' + out.join('<div class="lj">' + '</div>') + '</div>';
+}
+
 function picture(R, meId, themId){
   let html = '';
   R.segs.forEach((s, i) => {
@@ -415,7 +443,7 @@ function picture(R, meId, themId){
         + (h.divorced ? 'was married to' : 'married') + ' <b>' + esc(P.get(h.to).name) + '</b>'
         + (h.married ? ' <span class="mdate">(' + esc(h.married) + ')</span>' : '') + '</div>';
     }
-    html += segSvg(s, meId, themId, labelOf);
+    html += NARROW.matches ? segList(s, meId, themId, labelOf) : segSvg(s, meId, themId, labelOf);
   });
   return '<div class="diag">' + html + '</div>';
 }
@@ -477,7 +505,7 @@ function personHtml(p){
   if (p.died) life.push('died ' + p.died);
   else if (p.deceased) life.push('deceased');
   if (life.length) h += '<div class="meta">' + esc(life.join(' · ')) + '</div>';
-  if (p.maiden) h += '<div class="meta">née ' + esc(p.maiden) + '</div>';
+  if (p.maiden && p.sex !== 'M') h += '<div class="meta">née ' + esc(p.maiden) + '</div>';
   if (p.alt) h += '<div class="meta">Also known as: ' + esc(p.alt.split(' ; ').slice(0, 6).join(', ')) + '</div>';
   if (p.note) h += '<div class="meta">' + esc(p.note) + '</div>';
   h += '<div class="chips">' + sourceChips(p) + '</div>';
