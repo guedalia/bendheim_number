@@ -75,6 +75,7 @@ window.FAMILY_DATA = {
     {"pid": "2.1.2.1.2.4S",        "name": "Scott Gershon"},
     {"pid": "2.1.2.1.2.5",         "name": "Joey Guedalia", "alt": "Joseph Leon Guedalia"},
     {"pid": "2.1.2.1.2.5S",        "name": "Molly (Kramer) Guedalia"},
+    {"pid": "2.1.2.1.2.5.1",       "name": "Judah Leon Guedalia", "alt": "Yehuda Malachi Avraham"},
     {"pid": "2.1.2.1.2.6",         "name": "Roman Guedalia"},
     {"pid": "2.1.2.1.2.7",         "name": "Noa Alexandra Elisheva Guedalia"},
     {"pid": "2.1.2.1.3",           "name": "David Guedalia", "alt": "Issac David Guedalia"},
