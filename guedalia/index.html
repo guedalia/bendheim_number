@@ -326,6 +326,9 @@ function relName(R){
     if (isEmpty(s1) && is(s0, 1, 1)) return G(t, 'brother', 'sister', 'sibling') + '-in-law';
     if (isEmpty(s1) && is(s0, 0, 1)) return G(t, 'son', 'daughter', 'child') + '-in-law';
     if (isEmpty(s1) && is(s0, 1, 0)) return 'step' + G(t, 'father', 'mother', 'parent');
+    if (isEmpty(s1) && s0.b === 0 && s0.a >= 2) return 'step-' + anc(s0.a, t);
+    if (is(s0, 1, 0) && is(s1, 0, 1)) return 'step' + G(t, 'brother', 'sister', 'sibling');
+    if (is(s0, 1, 0) && is(s1, 0, 2)) return 'step-' + G(t, 'nephew', 'niece', 'nephew / niece');
     if (isEmpty(s1) && s0.b === 1 && s0.a >= 2) return greats(s0.a - 2) + G(t, 'uncle', 'aunt', 'uncle / aunt') + ' by marriage';
     if (is(s0, 0, 1) && is(s1, 1, 0)) return G(t, 'co-father-in-law (mechutan)', 'co-mother-in-law (machatenista)', 'co-parent-in-law');
   }
