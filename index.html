@@ -22,7 +22,7 @@ main{padding:22px;max-width:760px;margin:0 auto}
 h3{font-size:12px;margin:20px 0 8px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
 .card{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
 label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
-input[type=text]{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink);font-size:18px}
+input[type=text],input[type=search]{-webkit-appearance:none;appearance:none;width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink);font-size:18px}
 button{font:inherit;cursor:pointer;border-radius:8px}
 button.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:11px 16px}
 button.big{padding:14px 20px;font-weight:600;background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent)}
@@ -95,8 +95,8 @@ button.link{background:none;border:0;color:var(--accent);text-decoration:underli
 
 <div id="app" style="display:none">
   <div class="card">
-    <label>Find the family member — type a name, or a number like 2.1.2.1</label>
-    <input type="text" id="q" placeholder="Dani Bendheim" autocomplete="off">
+    <label>Search by name, or by family number like 2.1.2.1</label>
+    <input type="search" id="q" name="family_search" placeholder="Dani Bendheim" autocomplete="off" spellcheck="false" enterkeyhint="search">
     <div id="hits"></div>
   </div>
   <div id="out"></div>
